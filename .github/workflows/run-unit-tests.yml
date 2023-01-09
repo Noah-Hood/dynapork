@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: 
-        dotnet-version: ['6.0', '6.x', '7.0', '7.x']
+        dotnet-version: ['6.0.0', '6.0.x', '6.x.x']
     steps:
       - run: echo "Checking out code from ${{ github.repository }}."
       - name: Check out repository code
