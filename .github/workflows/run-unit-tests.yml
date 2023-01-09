@@ -18,10 +18,9 @@ on:
     
 jobs:
   Run-Unit-Tests:
-    platform_matrix:
-      strategy:
-        matrix:
-          platform: [ubuntu-latest, macos-latest, windows-latest]
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - run: echo "Checking out code from ${{ github.repository }}."
