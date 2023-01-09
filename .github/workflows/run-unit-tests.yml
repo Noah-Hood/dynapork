@@ -38,4 +38,5 @@ jobs:
       - name: Run Expecto Tests Against Util Classlib
         run: |
           dotnet run --no-restore --project ./util/test/Util.Test.fsproj
-      - run: echo "Status: ${{ job.status }}."
+      - run: |
+          echo "Status: ${{ job.status }}."
