@@ -17,14 +17,25 @@ on:
     
 jobs:
   Run-Unit-Tests:
-    runs-on: self-hosted
-    container:
-      image: mcr.microsoft.com/dotnet/sdk:6.0
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: 
+        dotnet-version: ['6.0', '6.x', '7.0', '7.x']
     steps:
       - run: echo "Checking out code from ${{ github.repository }}."
       - name: Check out repository code
         uses: actions/checkout@v3
+      - name: Setup Dotnet SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+      - name: Install Dependencies
+        run: |
+          dotnet restore
+      - name: Build
+        run: |
+          dotnet build
       - name: Run Expecto Tests Against Util Classlib
         run: |
-          dotnet run --project ./util/test/Util.Test.fsproj
+          dotnet run --no-restore --project ./util/test/Util.Test.fsproj
       - run: echo "Status: ${{ job.status }}."
