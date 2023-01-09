@@ -1,4 +1,4 @@
-name: GitHub Actions Demo
+name: Unit Testing
 run-name: 🧪 Run classlib Expecto tests by ${{ github.actor }} ⚗️
 on: 
   push:
