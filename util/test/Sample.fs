@@ -9,5 +9,5 @@ let tests =
     testCase "hello returns the expected value" <| fun _ ->
       let expected = "Hello Expecto"
       let result = hello "Expecto"
-      Expect.equal result expected "hello did not return the correct string"
+      Expect.equal result "failure" "hello did not return the correct string"
   ]
