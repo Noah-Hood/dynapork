@@ -1,4 +1,4 @@
-# Bounded-Context: Information Gathering
+# Bounded Context: IP Address Monitoring
 
   Workflow: Retrieve Local IP
     triggered by:
@@ -7,14 +7,6 @@
       None
     output events:
       "Public IP Received" event
-
-  Workflow: Retrieve DNS Record Information
-    triggered by:
-      "Time Expired" event
-    primary input:
-      PorkBun Credentials
-    output events:
-      "DNS Record Information Received" event
 
   Workflow: Determine if New IP Same as Old IP
     triggered by:
@@ -25,10 +17,29 @@
       Newly-Queried Public IP Address
     output events:
       "Public IP Changed" event
-    side-effects:
-      Update last known IP address
 
-  Workflow: Determine if New IP Matches DNS Record
+  Workflow: Update Last Known Public IP Address
+    triggered by:
+      "Public IP Changed" event
+    primary input:
+      New Public IP
+    output events:
+      "IP Address Updated"
+    side-effects:
+      Update last known IP Address
+
+
+# Bounded Context: DNS Record Monitoring
+
+  Workflow: Retrieve DNS Record Information
+    triggered by:
+      "Time Expired" event
+    primary input:
+      PorkBun Credentials
+    output events:
+      "DNS Record Information Received" event
+
+  Workflow: Invalidate DNS Record
     triggered by:
       "Public IP Changed" event
     primary input:
@@ -38,6 +49,24 @@
     output events:
       "DNS Record Invalidated" event
 
+  Workflow: Refresh DNS Record TTL
+    triggered by:
+      "DNS Record TTL Expired" event
+    primary input:
+      Last known DNS Record information
+    other input:
+      PorkBun credentials
+    output events:
+      "DNS Record TTL Refreshed"
+    side-effects:
+      Refreshing of the DNS Record's TTL
+
+
+
+
+# Bounded-Context: Information Gathering
+
+  
   Workflow: Update DNS Record
     triggered by:
       "DNS Record Invalidated" event

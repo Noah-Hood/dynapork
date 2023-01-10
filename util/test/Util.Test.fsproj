@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Sample.fs" />
+    <Compile Include="./IPAddress.Tests/InvalidateIPV4Address.Test.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
