@@ -1,20 +1,28 @@
-# Bounded Context: IP Address Monitoring
+# Bounded Context: IP Monitoring
 
-  Workflow: Retrieve Local IP
+  Workflow: Retrieve IP
     triggered by:
-      "Timer Expired" event
+      "Timer Window Expired" event
     primary input:
-      None
+      PorkBun Credentials
     output events:
       "Public IP Received" event
 
+  Workflow: Validate IP Address
+    triggered by:
+      "Public IP Address Retrieved" event
+    primary input:
+      New IP Address
+    output events:
+      "New IP Address Validated" event
+
   Workflow: Determine if New IP Same as Old IP
     triggered by:
-      "Local Public IP Received" event
+      "New IP Address Validated" event
     primary input:
-      Last Known Public IP Address
+      Last Known Public IP Address (verified)
     other input:
-      Newly-Queried Public IP Address
+      Newly-Queried Public IP Address (verified)
     output events:
       "Public IP Changed" event
 
@@ -26,65 +34,30 @@
     output events:
       "IP Address Updated"
     side-effects:
-      Update last known IP Address
+      last known IP Address updated
 
 
 # Bounded Context: DNS Record Monitoring
 
-  Workflow: Retrieve DNS Record Information
+  Workflow: Refresh Expired TTL
     triggered by:
-      "Time Expired" event
+      "TTL Expired" event
     primary input:
-      PorkBun Credentials
-    output events:
-      "DNS Record Information Received" event
-
-  Workflow: Invalidate DNS Record
-    triggered by:
-      "Public IP Changed" event
-    primary input:
-      New IP Address
+      DNS Information
     other input:
-      Last Known DNS Record Information
+      Desired TTL
     output events:
-      "DNS Record Invalidated" event
+      "TTL Refreshed" event
+    side-effects:
+      DNS Listing TTL refreshed
 
-  Workflow: Refresh DNS Record TTL
+  Workflow: Update DNS Listing
     triggered by:
-      "DNS Record TTL Expired" event
+      "Public IP Address Updated" event
     primary input:
-      Last known DNS Record information
+      New Public IP Address
     other input:
+      DNS inputs (domain, ttl, etc.)
       PorkBun credentials
     output events:
-      "DNS Record TTL Refreshed"
-    side-effects:
-      Refreshing of the DNS Record's TTL
-
-
-
-
-# Bounded-Context: Information Gathering
-
-  
-  Workflow: Update DNS Record
-    triggered by:
-      "DNS Record Invalidated" event
-    primary input:
-      New Public IP
-    other input:
-      PorkBun credentials
-    output events:
-      "DNS Record Updated" event
-    side-effects:
-      DNS record updated on PorkBun API
-
-  Workflow: Refresh DNS Record Lease
-    triggered by:
-      "DNS Record Lease Expired" event
-    primary input:
-      Latest Known DNS Information
-    other input:
-      Desired lease refresh time
-    output events:
-      DNS Record TTL Refreshed
+      "DNS Listing Updated" event

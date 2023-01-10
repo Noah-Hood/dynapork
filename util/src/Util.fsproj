@@ -12,4 +12,8 @@
     <Compile Include="DNSRecord.Functions.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Package Include="netstandard" />
+  </ItemGroup>
+
 </Project>

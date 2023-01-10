@@ -1,13 +1,21 @@
-I first reach out to an IP provider, specifically `icanhazip.com`,
-and see what my public IP address is.
+## IP Monitoring
 
-I compare that against the IP address of my domain with the Porkbun API.
+I reach out periodically to a website to retrieve my public IP Address.
 
-If the two match, I don't do anything and check back in after a certain period 
-of time.
+Then I compare it to my last known IP address, which can be either blank (the first time I've checked)
+or it can contain an old IP address.
 
-If the two don't match, I update the Porkbun DNS record to point to my new
-public IP.
+If the new one is not the same as the old one, I take down the new one in place of the old one and tell everyone
+that the address has changed.
 
-I also keep track of the length of my DNS Record TTL; when it is nearly expired I will reach out
-and refresh it.
+## DNS Record Maintenance
+
+My most common job is to keep track of the TTL of the DNS record.
+
+When the record is about to expire, I reach back out to PorkBun and refresh the TTL with the old DNS record information from
+before. When I refresh the TTL, I let everyone know I've refreshed it, when, and for how long.
+
+I also keep an eye out for when the IP address has changed.
+
+If I notice it's changed, I gather the new IP address value and reach out to PorkBun to update the listing. I refresh the TTL
+at the same time, and I tell everyone I have updated the DNS listing.

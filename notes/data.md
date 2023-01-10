@@ -1,48 +1,54 @@
-# Bounded Context: Information Gathering
+# Bounded Context: IP Monitoring
 
-  data IPV4Address = four groups of string separated with periods
+data TimeWindow = Frequency of re-checking IP
 
-  data InvalidIP = IPV4Address
+data IPV4 = string of x.x.x.x where -1 < x < 256 
 
-  data ValidIP = IPV4Address
+data IPAddress = 
+  Unvalidated 
+  OR Validated
 
-  data PublicIP = 
-    InvalidIP
-    OR ValidIP
+data Unvalidated = IPV4
+data Validated = IPV4
 
-  data DNSRecord = 
-    ID
-    AND Name
-    AND DNSRecordType
-    AND Content // IPv4
-    AND TTL
-    AND Priority
-    AND Notes
+data IPValidationResult = 
+  IPAddress
+  OR IPValidationError
 
-  data ID = string
+data IPValidationError = 
+  Empty
+  OR OverLength
+  OR InvalidQuartets
 
-  data Name = string
+# Bounded Context: DNS Record Maintenance
 
-  data DNSRecordData = 
-    A
-    OR MX
-    OR CNAME
-    OR ALIAS
-    OR TXT
-    OR NS
-    OR AAAA
-    OR SRV
-    OR TLSA
-    OR CAA
+data TTL = Timespan in seconds
 
-  data Content = IPV4Address
+data DNS Listing = 
+  Name
+  AND Type
+  AND Content
+  AND TTL
+  AND Prio
 
-  data TTL = integer time in seconds, greater than or equal to 600
+data Name = 
+  Root
+  OR Subdomain
 
-  data Priority = unknown
+data Subdomain = string
 
-  data Notes = string
+data DNSType = 
+  A
+  OR MX
+  OR CNAME
+  OR ALIAS
+  OR TXT
+  OR NS
+  OR AAAA
+  OR SRC
+  OR TLSA
+  OR CAAA
 
-  data DNSRecord = 
-    InvalidatedDNSRecord
-    OR ValidDNSRecord
+data Content = string
+
+data Prio = unknown
