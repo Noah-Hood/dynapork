@@ -9,7 +9,7 @@ type IPAddress =
 
 type IPValidationError =
     | Empty of string
-    | InvaludQuartets of string
+    | InvalidQuartets of string
 
 type ValidateIP = UnvalidatedIP -> Result<ValidatedIP, IPValidationError>
 
