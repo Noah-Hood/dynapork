@@ -1,15 +1,28 @@
-namespace Util.Types
+namespace Domain
+
+type UnvalidatedIP = UnvalidatedIP of string
+type ValidatedIP = ValidatedIP of string
+
+type IPAddress =
+    | Unvalidated of UnvalidatedIP
+    | Validated of ValidatedIP
+
+type IPValidationError =
+    | Empty of string
+    | InvaludQuartets of string
+
+type ValidateIP = UnvalidatedIP -> Result<ValidatedIP, IPValidationError>
 
 module IPAddress =
-    type IPV4Address = IPV4Address of string
+    /// <summary>Constructor for IPAddress type</summary>
+    let create (str: string) = str |> UnvalidatedIP |> Unvalidated
 
-    type InvalidIPV4Address = InvalidIPV4Address of IPV4Address
-    type ValidIPV4Address = ValidIPV4Address of IPV4Address
-
-    type PublicIP =
-        | Invalid of InvalidIPV4Address
-        | Valid of ValidIPV4Address
-
-    type InvalidateIPV4Address = ValidIPV4Address -> InvalidIPV4Address
-
-    type ValidateIPV4Address = InvalidIPV4Address -> ValidIPV4Address
+    /// <summary>Extracts the string content of an IPAddress</summary>
+    let value ipAddr =
+        match ipAddr with
+        | Unvalidated u ->
+            let (UnvalidatedIP strVal) = u
+            strVal
+        | Validated v ->
+            let (ValidatedIP strVal) = v
+            strVal

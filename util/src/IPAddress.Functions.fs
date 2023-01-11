@@ -1,15 +1,7 @@
-namespace Util.Functions
+namespace Functions
 
 module IPAddress =
-    open Util.Types.IPAddress
+    open Domain
 
-    let ValidateIPV4Address: ValidateIPV4Address =
-        fun unvalidated ->
-            let (InvalidIPV4Address invalid) = unvalidated
-            ValidIPV4Address invalid
-
-    let InvalidateIPV4Address: InvalidateIPV4Address =
-        fun valid ->
-            let (ValidIPV4Address addr) = valid
-
-            InvalidIPV4Address addr
+    let validateIP: ValidateIP =
+        fun (UnvalidatedIP unValStr) -> unValStr |> IPV4 |> ValidatedIP |> Ok
