@@ -12,7 +12,9 @@ let tests =
         [ testCase "It returns a validated IP address for a valid IP"
           <| fun _ ->
               let validIPStr = "192.168.1.1"
-              let expected = validIPStr |> ValidatedIP |> Ok
+
+              let expected =
+                  validIPStr |> ValidatedIP |> Validated |> Ok
 
               let actual = validateIP (UnvalidatedIP validIPStr)
 
@@ -22,8 +24,7 @@ let tests =
           <| fun _ ->
               let invalidIpStr = "1111."
 
-              let expected =
-                  InvalidQuartets "IP Address is malformed" |> Error
+              let expected = InvalidQuartets |> Error
 
               let actual = validateIP (UnvalidatedIP invalidIpStr)
               Expect.equal actual expected "Did not return an error for a malformed IP address"

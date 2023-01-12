@@ -11,8 +11,8 @@ module IPAddress =
     let validateIP: ValidateIP =
         fun (UnvalidatedIP ipStr) ->
             if ipStr = "" then
-                Empty "IP Address was empty" |> Error
+                Empty |> Error
             elif not (Regex.IsMatch(ipStr, ipRegex)) then
-                InvalidQuartets "IP Address is malformed" |> Error
+                InvalidQuartets |> Error
             else
-                ipStr |> ValidatedIP |> Ok
+                ipStr |> ValidatedIP |> Validated |> Ok

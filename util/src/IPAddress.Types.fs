@@ -8,10 +8,12 @@ type IPAddress =
     | Validated of ValidatedIP
 
 type IPValidationError =
-    | Empty of string
-    | InvalidQuartets of string
+    | Empty
+    | InvalidQuartets
 
-type ValidateIP = UnvalidatedIP -> Result<ValidatedIP, IPValidationError>
+type IPValidationResult = Result<IPAddress, IPValidationError>
+
+type ValidateIP = UnvalidatedIP -> IPValidationResult
 
 module IPAddress =
     /// <summary>Constructor for IPAddress type</summary>
