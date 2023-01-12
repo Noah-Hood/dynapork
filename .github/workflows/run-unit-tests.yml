@@ -8,8 +8,13 @@ on:
   pull_request:
     types: [opened, synchronize]
     branches:
-      - 'main/**'
-      - 'develop/**'
+      - 'main'
+      - 'develop'
+    paths:
+      - "**.fs"
+      - "**.fsproj"
+      - "**.sln"
+      - "**.yml"
     
 jobs:
   Run-Unit-Tests:
