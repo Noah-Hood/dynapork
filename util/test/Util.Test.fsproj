@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="./IPAddress.Tests/ValidateIP.Test.fs" />
+    <Compile Include="./PublicIP.Tests/UpdatePublicIP.Test.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
