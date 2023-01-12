@@ -6,7 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="IPAddress.Types.fs" />
+    <Compile Include="IPAddress.Functions.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Package Include="netstandard" />
   </ItemGroup>
 
 </Project>

@@ -1,61 +1,63 @@
-# Bounded-Context: Information Gathering
+# Bounded Context: IP Monitoring
 
-  Workflow: Retrieve Local IP
+  Workflow: Retrieve IP
     triggered by:
-      "Timer Expired" event
-    primary input:
-      None
-    output events:
-      "Public IP Received" event
-
-  Workflow: Retrieve DNS Record Information
-    triggered by:
-      "Time Expired" event
+      "Timer Window Expired" event
     primary input:
       PorkBun Credentials
     output events:
-      "DNS Record Information Received" event
+      "Public IP Received" event
+
+  Workflow: Validate IP Address
+    triggered by:
+      "Public IP Address Retrieved" event
+    primary input:
+      New IP Address
+    output events:
+      "New IP Address Validated" event
 
   Workflow: Determine if New IP Same as Old IP
     triggered by:
-      "Local Public IP Received" event
+      "New IP Address Validated" event
     primary input:
-      Last Known Public IP Address
+      Last Known Public IP Address (verified)
     other input:
-      Newly-Queried Public IP Address
+      Newly-Queried Public IP Address (verified)
     output events:
       "Public IP Changed" event
-    side-effects:
-      Update last known IP address
 
-  Workflow: Determine if New IP Matches DNS Record
+  Workflow: Update Last Known Public IP Address
     triggered by:
       "Public IP Changed" event
-    primary input:
-      New IP Address
-    other input:
-      Last Known DNS Record Information
-    output events:
-      "DNS Record Invalidated" event
-
-  Workflow: Update DNS Record
-    triggered by:
-      "DNS Record Invalidated" event
     primary input:
       New Public IP
+    output events:
+      "IP Address Updated"
+    side-effects:
+      last known IP Address updated
+
+
+# Bounded Context: DNS Record Monitoring
+
+  Workflow: Refresh Expired TTL
+    triggered by:
+      "TTL Expired" event
+    primary input:
+      DNS Information
     other input:
+      Desired TTL
+    output events:
+      "TTL Refreshed" event
+    side-effects:
+      DNS Listing TTL refreshed
+
+  Workflow: Update DNS Listing
+    triggered by:
+      "Public IP Address Updated" event
+    primary input:
+      New Public IP Address
+    other input:
+      DNS inputs (domain, ttl, etc.)
       PorkBun credentials
     output events:
-      "DNS Record Updated" event
-    side-effects:
-      DNS record updated on PorkBun API
-
-  Workflow: Refresh DNS Record Lease
-    triggered by:
-      "DNS Record Lease Expired" event
-    primary input:
-      Latest Known DNS Information
-    other input:
-      Desired lease refresh time
-    output events:
-      DNS Record TTL Refreshed
+      "DNS Listing Updated" event

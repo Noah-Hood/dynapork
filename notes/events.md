@@ -1,20 +1,15 @@
-# Event Storming
+# Events
 
-## Events
+## IP Monitoring
 
-- Timer Expired
-- DNS Record Lease Expired
-- Public IP Address Received
+- Time Window Expired
+- Public IP Address Retrieved
 - Public IP Address Changed
-- DNS Record Received
-- DNS Record Invalidated
-- DNS Record Updated
-- DNS TTL Refreshed
+- Public IP Address Updated
+- New IP Address Validated
 
+## DNS Record Maintenance
 
-## Workflows
-
-- Check Local IP
-- Check Porkbun DNS Listing
-- Agree Porkbun DNS Listing IP with Local Public IP
-- Update Porkbun DNS Listing
+- TTL Expired
+- TTL Refreshed
+- DNS Listing Updated

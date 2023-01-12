@@ -15,4 +15,7 @@ bin
 .ionide/
 .fake
 
+# Ionide Test Results
+TestResults/
+
 # End of https://www.toptal.com/developers/gitignore/api/fsharp
