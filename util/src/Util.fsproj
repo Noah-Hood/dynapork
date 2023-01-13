@@ -8,8 +8,6 @@
   <ItemGroup>
     <Compile Include="IPAddress.Types.fs" />
     <Compile Include="IPAddress.Functions.fs" />
-    <Compile Include="PublicIP.Types.fs" />
-    <Compile Include="PublicIP.Functions.fs" />
   </ItemGroup>
 
   <ItemGroup>
