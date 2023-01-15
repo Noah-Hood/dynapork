@@ -3,34 +3,122 @@ module UpdateIPTests
 open Expecto
 
 open Domain
-open Functions.IPAddress
+open Functions
 
 [<Tests>]
 let tests =
     testList
         "UpdateIP tests"
-        [ testCase "Returns the original IP address unchanged when presented with a matching IP"
+        [ testCase "Returns an unchanged IP address when the address and timestamp are the same"
           <| fun _ ->
-              let validIP = "192.168.1.1" |> IPAddress
+              let ipAddrStr = "192.168.1.254"
+              let ts = System.DateTime.Now
 
-              let expected = validIP |> Unchanged
+              let ipAddr =
+                  { Address = ipAddrStr; UpdatedAt = ts }
+                  |> IPAddress
 
-              let command = validIP |> UpdateIP
-              let result = updateIP command validIP
+              let cmd = ipAddr |> UpdateIP
 
-              Expect.equal result expected "Did not leave the original IP address unchanged"
+              let expected = ipAddr |> Unchanged
 
-          testCase "Returns an updated IP address when presented with a new IP Address"
+              let result = IPAddress.updateIP cmd ipAddr
+
+              Expect.equal result expected "Did not return an Unchanged IP"
+
+          testCase "Returns the same IP Address when unchanged"
           <| fun _ ->
-              let validIP = "192.168.1.1" |> IPAddress
-              let newValidIP = "10.10.10.1" |> IPAddress
+              let ipAddrStr = "192.168.1.254"
+              let ts = System.DateTime.Now
 
-              let command = newValidIP |> UpdateIP
+              let ipAddr =
+                  { Address = ipAddrStr; UpdatedAt = ts }
+                  |> IPAddress
 
-              let expected = newValidIP |> Changed
+              let cmd = ipAddr |> UpdateIP
 
-              let result = updateIP command validIP
+              let result = IPAddress.updateIP cmd ipAddr
 
-              Expect.equal result expected "Did not return a changed IP when given a new IP"
+              let resultIP =
+                  match result with
+                  | Unchanged (IPAddress u) -> Some u.Address
+                  | _ -> None
+
+              Expect.equal resultIP (Some ipAddrStr) "Did not return the same IP address"
+
+          testCase "Returns the same timestamp when unchanged"
+          <| fun _ ->
+              let ipAddrStr = "192.168.1.254"
+              let ts = System.DateTime.Now
+
+              let ipAddr =
+                  { Address = ipAddrStr; UpdatedAt = ts }
+                  |> IPAddress
+
+              let cmd = ipAddr |> UpdateIP
+
+              let result = IPAddress.updateIP cmd ipAddr
+
+              let resultTS =
+                  match result with
+                  | Unchanged (IPAddress u) -> Some u.UpdatedAt
+                  | _ -> None
+
+              Expect.equal resultTS (Some ts) "Did not return the same timestamp"
+
+          testCase "Returns the new timestamp and old IP Address when revalidated"
+          <| fun _ ->
+              let ipAddrStr = "192.168.1.254"
+              let ts = System.DateTime.Now
+              let newTS = ts + System.TimeSpan.FromMinutes(10)
+
+              let originalIP =
+                  { Address = ipAddrStr; UpdatedAt = ts }
+                  |> IPAddress
+
+              let newIP =
+                  { Address = ipAddrStr
+                    UpdatedAt = newTS }
+                  |> IPAddress
+
+              let cmd = newIP |> UpdateIP
+
+              let result = IPAddress.updateIP cmd originalIP
+
+              let result =
+                  match result with
+                  | Revalidated r -> Some r
+                  | _ -> None
+
+              Expect.equal result (Some newIP) "Did not return the original IP with the new timestamp"
+
+          testCase "Returns the new timestamp and new IP Address when updated"
+          <| fun _ ->
+              let originalIPStr = "192.168.1.254"
+              let newIPStr = "10.10.1.1"
+              let ts = System.DateTime.Now
+              let newTS = ts + System.TimeSpan.FromMinutes(10)
+
+              let originalIP =
+                  { Address = originalIPStr
+                    UpdatedAt = ts }
+                  |> IPAddress
+
+              let newIP =
+                  { Address = newIPStr
+                    UpdatedAt = newTS }
+                  |> IPAddress
+
+              let cmd = newIP |> UpdateIP
+
+              let result = IPAddress.updateIP cmd originalIP
+
+              let result =
+                  match result with
+                  | Changed c -> Some c
+                  | _ -> None
+
+              Expect.equal result (Some newIP) "Did not return the new IP with the new timestamp"
+
 
           ]
