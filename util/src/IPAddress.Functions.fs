@@ -1,18 +1,26 @@
 namespace Functions
 
-open System.Text.RegularExpressions
-
 module IPAddress =
     open Domain
 
-    let private ipRegex =
-        @"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$"
+    let updateIP: UpdateIP =
+        fun (cmd) (IPAddress oldIPData) ->
+            match cmd with
+            | UpdateIP (IPAddress newIPData) ->
+                let { Address = newAddr
+                      UpdatedAt = newUpdatedAt } =
+                    newIPData
 
-    let validateIP: ValidateIP =
-        fun (UnvalidatedIP ipStr) ->
-            if ipStr = "" then
-                Empty |> Error
-            elif not (Regex.IsMatch(ipStr, ipRegex)) then
-                InvalidQuartets |> Error
-            else
-                ipStr |> ValidatedIP |> Validated |> Ok
+                let { Address = oldAddr
+                      UpdatedAt = oldUpdatedAt } =
+                    oldIPData
+
+                let newIP =
+                    { Address = newAddr
+                      UpdatedAt = newUpdatedAt }
+                    |> IPAddress
+
+                match (newAddr = oldAddr, newUpdatedAt = oldUpdatedAt) with
+                | true, true -> newIP |> Unchanged
+                | true, false -> newIP |> Revalidated
+                | _ -> newIP |> Changed
