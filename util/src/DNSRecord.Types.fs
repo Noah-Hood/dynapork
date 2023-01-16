@@ -3,9 +3,6 @@ namespace Domain
 [<Measure>]
 type Second
 
-type SecretAPIKey = SecretAPIKey of string
-type APIKey = APIKey of string
-
 type Name =
     | Root
     | Wildcard
@@ -32,11 +29,51 @@ type DNSRecordData =
       Content: Content
       TTL: TTL }
 
-type DNSRecordCommand =
-    | RefreshTTL of TTL
-    | UpdateRecord of DNSRecordData
+type DNSRecord =
+    { Data: DNSRecordData
+      TS: System.DateTime }
 
-type DNSRecordEvent =
-    | Unchanged
-    | TTLRefreshed of DNSRecordData
-    | DNSRecordUpdated of DNSRecordData
+type EmptyCustomNameError = EmptyCustomNameError
+type InvalidTTLError = InvalidTTLError
+
+type DNSRecordValidationError =
+    | EmptyCustomName of EmptyCustomNameError
+    | InvalidTTL of InvalidTTLError
+
+type DNSRecordValidationResult = Result<DNSRecord, DNSRecordValidationError>
+
+
+module DNSRecord =
+
+    let validateName dnsRecordData =
+        let { Name = name } = dnsRecordData
+
+        match name with
+        | Custom c ->
+            if c = "" then
+                EmptyCustomNameError
+                |> Error
+                |> Result.mapError EmptyCustomName
+            else
+                Ok dnsRecordData
+        | _ -> Ok dnsRecordData
+
+    let validateTTL dnsRecordData =
+        let { TTL = ttl } = dnsRecordData
+
+        match ttl with
+        | _ when ttl < 600<Second> ->
+            InvalidTTLError
+            |> Error
+            |> Result.mapError InvalidTTL
+        | _ -> Ok dnsRecordData
+
+    let validateDnsRecordData = validateName >> Result.bind validateTTL
+
+    let create data =
+        data
+        |> validateDnsRecordData
+        |> Result.bind (fun x ->
+            Ok
+                { DNSRecord.Data = x
+                  DNSRecord.TS = System.DateTime.Now })
