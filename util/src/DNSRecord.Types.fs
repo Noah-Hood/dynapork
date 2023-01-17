@@ -33,6 +33,7 @@ type DNSRecord =
     { Data: DNSRecordData
       TS: System.DateTime }
 
+/// DNSRecord creation types
 type EmptyCustomNameError = EmptyCustomNameError
 type InvalidTTLError = InvalidTTLError
 
@@ -42,6 +43,21 @@ type DNSRecordValidationError =
 
 type DNSRecordValidationResult = Result<DNSRecord, DNSRecordValidationError>
 
+/// DNSRecord Commands
+type UpdateRecordCmd = Command<DNSRecord>
+
+type DNSRecordCommand = UpdateRecord of UpdateRecordCmd
+
+/// DNSRecord Events
+type DNSRecordUpdated = DNSRecordUpdated of DNSRecord
+
+type DNSRecordUpdateError = RecordNotUpdated of string
+
+type DNSRecordServiceError = | FailedToLoad
+
+type DNSRecordService = DNSRecord -> Async<Result<DNSRecord, DNSRecordServiceError>>
+
+type UpdateDNSRecord = DNSRecordService -> DNSRecordCommand -> Async<Result<DNSRecordUpdated, DNSRecordUpdateError>>
 
 module DNSRecord =
 

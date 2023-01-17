@@ -56,3 +56,11 @@ workflow: "Validate DNS Record"
     if Name is invalid then
       InvalidateRecord
       stop
+
+workflow: "Update DNS Record"
+  input: 
+    DNSRecordUpdateService
+    DNSRecord
+  output:
+    UpdatedDNSRecord
+    OR DNSRecordUpdateError
