@@ -6,8 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Command.Types.fs" />
     <Compile Include="IPAddress.Types.fs" />
     <Compile Include="IPAddress.Functions.fs" />
+    <Compile Include="DNSRecord.Types.fs" />
+    <Compile Include="DNSRecord.Functions.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <Compile Include="./IPAddress.Tests/UpdateIP.Test.fs" />
+    <Compile Include="./DNSRecord.Tests/Create.Test.fs" />
+    <Compile Include="./DNSRecord.Tests/UpdateDNSRecord.Test.fs" />
+    <Compile Include="./DNSRecord.Tests/RefreshTTL.Test.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 

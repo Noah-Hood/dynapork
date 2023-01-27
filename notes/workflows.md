@@ -1,63 +1,66 @@
 # Bounded Context: IP Monitoring
 
-  Workflow: Retrieve IP
-    triggered by:
-      "Timer Window Expired" event
-    primary input:
-      PorkBun Credentials
-    output events:
-      "Public IP Received" event
+Workflow: Retrieve IP
+triggered by:
+"Timer Window Expired" event
+primary input:
+PorkBun Credentials
+output events:
+"Public IP Received" event
 
-  Workflow: Validate IP Address
-    triggered by:
-      "Public IP Address Retrieved" event
-    primary input:
-      New IP Address
-    output events:
-      "New IP Address Validated" event
+Workflow: Validate IP Address
+triggered by:
+"Public IP Address Retrieved" event
+primary input:
+New IP Address
+output events:
+"New IP Address Validated" event
 
-  Workflow: Determine if New IP Same as Old IP
-    triggered by:
-      "New IP Address Validated" event
-    primary input:
-      Last Known Public IP Address (verified)
-    other input:
-      Newly-Queried Public IP Address (verified)
-    output events:
-      "Public IP Changed" event
+Workflow: Determine if New IP Same as Old IP
+triggered by:
+"New IP Address Validated" event
+primary input:
+Last Known Public IP Address (verified)
+other input:
+Newly-Queried Public IP Address (verified)
+output events:
+"Public IP Changed" event
 
-  Workflow: Update Last Known Public IP Address
-    triggered by:
-      "Public IP Changed" event
-    primary input:
-      New Public IP
-    output events:
-      "IP Address Updated"
-    side-effects:
-      last known IP Address updated
+Workflow: Update Last Known Public IP Address
+triggered by:
+"Public IP Changed" event
+primary input:
+New Public IP
+output events:
+"IP Address Updated"
+side-effects:
+last known IP Address updated
 
+# Bounded Context: DNS Record
 
-# Bounded Context: DNS Record Monitoring
+workflow: "Validate DNS Record"
+  input: UnvalidatedDNSRecord
+  output: 
+    ValidatedDNSRecord
+    OR InvalidDNSRecord
 
-  Workflow: Refresh Expired TTL
-    triggered by:
-      "TTL Expired" event
-    primary input:
-      DNS Information
-    other input:
-      Desired TTL
-    output events:
-      "TTL Refreshed" event
-    side-effects:
-      DNS Listing TTL refreshed
+  // step 1:
+  do ValidateTTL
+  if TTL is invalid then
+    InvalidateRecord
+    stop
 
-  Workflow: Update DNS Listing
-    triggered by:
-      "Public IP Address Updated" event
-    primary input:
-      New Public IP Address
-    other input:
-      DNS inputs (domain, ttl, etc.)
-      PorkBun credentials
-    output events:
-      "DNS Listing Updated" event
+  // step 2:
+  do ValidateName
+  if Name is custom then
+    if Name is invalid then
+      InvalidateRecord
+      stop
+
+workflow: "Update DNS Record"
+  input: 
+    DNSRecordUpdateService
+    DNSRecord
+  output:
+    UpdatedDNSRecord
+    OR DNSRecordUpdateError
