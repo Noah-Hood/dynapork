@@ -46,18 +46,32 @@ type DNSRecordValidationResult = Result<DNSRecord, DNSRecordValidationError>
 /// DNSRecord Commands
 type UpdateRecordCmd = Command<DNSRecord>
 
-type DNSRecordCommand = UpdateRecord of UpdateRecordCmd
+type RefreshTTLData = { Record: DNSRecord; NewTTL: TTL }
+type RefreshTTLCmd = Command<RefreshTTLData>
+
+type DNSRecordCommand =
+    | UpdateRecord of UpdateRecordCmd
+    | RefreshTTL of RefreshTTLCmd
 
 /// DNSRecord Events
 type DNSRecordUpdated = DNSRecordUpdated of DNSRecord
+type TTLRefreshed = TTLRefreshed of DNSRecord
 
-type DNSRecordUpdateError = RecordNotUpdated of string
+/// DNSRecord Errors
+type InvalidCommandError = InvalidCommandError of DNSRecord
+
+type DNSRecordError =
+    | RecordNotUpdated of string
+    | TTLNotRefreshed of string
+    | InvalidCommand of InvalidCommandError
 
 type DNSRecordServiceError = | FailedToLoad
 
 type DNSRecordService = DNSRecord -> Async<Result<DNSRecord, DNSRecordServiceError>>
 
-type UpdateDNSRecord = DNSRecordService -> DNSRecordCommand -> Async<Result<DNSRecordUpdated, DNSRecordUpdateError>>
+type UpdateDNSRecord = DNSRecordService -> DNSRecordCommand -> Async<Result<DNSRecordUpdated, DNSRecordError>>
+
+type RefreshTTL = DNSRecordService -> DNSRecordCommand -> Async<Result<TTLRefreshed, DNSRecordError>>
 
 module DNSRecord =
 
