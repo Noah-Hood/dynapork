@@ -15,10 +15,19 @@ let findPublicIP (withClient: HttpClient) =
 
 [<EntryPoint>]
 let main _ =
-    let testJson =
+    let testSuccess =
         "{'status':'SUCCESS', 'yourIp':'192.168.1.1'}"
 
-    Decode.fromString Domain.DNSRecord.PBPingResponse.decoder testJson
+    let testFailure =
+        "{'status':'SUCCESS', 'yourIp':'192.168.1.1'}"
+
+
+    Decode.fromString Domain.DNSRecord.PBPingResponse.decoder testSuccess
+    |> (printfn "%A")
+
+    printfn "%s" "\n\n\n"
+
+    Decode.fromString Domain.DNSRecord.PBPingResponse.decoder testFailure
     |> (printfn "%A")
 
     0
