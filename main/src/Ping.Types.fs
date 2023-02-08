@@ -7,14 +7,13 @@ module Ping =
         { SecretAPIKey: string
           APIKey: string }
 
-    type PBPingSuccessResponse = { Status: string; YourIp: string }
+    type PBPingSuccessResponse = { Status: string; YourIP: string }
 
     type PBPingFailureResponse = { Status: string; Message: string }
 
     type PBPingResponse =
         | PBPingSuccess of PBPingSuccessResponse
         | PBPingFailure of PBPingFailureResponse
-
 
     // Thoth coders
     module PBPingCommand =
@@ -30,12 +29,12 @@ module Ping =
     module PBPingSuccessResponse =
         let encoder (successResponse: PBPingSuccessResponse) =
             Encode.object [ "status", Encode.string successResponse.Status
-                            "yourIp", Encode.string successResponse.YourIp ]
+                            "yourIp", Encode.string successResponse.YourIP ]
 
         let decoder: Decoder<PBPingSuccessResponse> =
             Decode.object (fun get ->
                 { PBPingSuccessResponse.Status = get.Required.Field "status" Decode.string
-                  PBPingSuccessResponse.YourIp = get.Required.Field "yourIp" Decode.string })
+                  PBPingSuccessResponse.YourIP = get.Required.Field "yourIp" Decode.string })
 
     module PBPingFailureResponse =
         let encoder (failureResponse: PBPingFailureResponse) =
@@ -52,7 +51,7 @@ module Ping =
             match resp with
             | PBPingSuccess s ->
                 Encode.object [ "status", Encode.string s.Status
-                                "yourIp", Encode.string s.YourIp ]
+                                "yourIp", Encode.string s.YourIP ]
             | PBPingFailure f ->
                 Encode.object [ "status", Encode.string f.Status
                                 "message", Encode.string f.Message ]

@@ -2,6 +2,7 @@
 open Thoth.Json.Net
 
 open DNSRecord.Ping
+open DNSRecord.EditDNSRecord
 
 [<Literal>]
 let PorkBunPingURL = "https://porkbun.com/api/json/v3/ping"
@@ -21,34 +22,26 @@ let findPublicIP (withClient: HttpClient) =
 
 [<EntryPoint>]
 let main _ =
-    use client = new HttpClient()
 
-    let apiKey = Secrets.PBAPIKey
-    let apiSecretKey = Secrets.PBAPISecretKey
+    let sampleRq =
+        "{'secretapikey':'secret', 'apikey':'notsecret', 'name':'www', 'type':'A', 'content': '192.168.1.1', 'ttl': '600'}"
 
-    let cmd =
-        { SecretAPIKey = apiSecretKey
-          APIKey = apiKey }
+    let sampleObj =
+        { SecretAPIKey = "secret"
+          APIKey = "notsecret"
+          Name = None
+          Type = "A"
+          Content = "192.168.1.1"
+          TTL = None
+          Prio = None }
 
-    let cmdArgs = PBPingCommand.encoder cmd
+    Decode.fromString EditDNSRecordCommand.decoder sampleRq
+    |> (printfn "%A")
 
-    let content =
-        new StringContent(cmdArgs.ToString(), System.Text.Encoding.UTF8, "application/json")
+    EditDNSRecordCommand.encoder sampleObj
+    |> (fun x -> x.ToString())
+    |> (printfn "%s")
 
-    async {
-        let! result =
-            client.PostAsync(PorkBunPingURL, content)
-            |> Async.AwaitTask
 
-        let! content =
-            result.Content.ReadAsStringAsync()
-            |> Async.AwaitTask
-
-        content
-        |> Decode.fromString PBPingResponse.decoder
-        |> (printfn "%A")
-    }
-    |> Async.RunSynchronously
-    |> ignore
 
     0
