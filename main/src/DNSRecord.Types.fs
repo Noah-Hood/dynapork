@@ -1,6 +1,6 @@
 namespace Domain
 
-open Thoth.Json
+open Thoth.Json.Net
 
 module DNSRecord =
     type PBPingCommand =
@@ -48,7 +48,6 @@ module DNSRecord =
                   PBPingFailureResponse.Message = get.Required.Field "message" Decode.string })
 
     module PBPingResponse =
-
         let encoder (resp: PBPingResponse) =
             match resp with
             | PBPingSuccess s ->

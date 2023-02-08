@@ -1,4 +1,5 @@
 ﻿open System.Net.Http
+open Thoth.Json.Net
 
 // step 1: find public IP
 let findPublicIP (withClient: HttpClient) =
@@ -12,30 +13,12 @@ let findPublicIP (withClient: HttpClient) =
         return pubIp
     }
 
-// step 2: create a timer which checks for a new IP Address every thirty seconds
-let createObservableTimer interval =
-    let timer = new System.Timers.Timer(float interval)
-    timer.AutoReset <- true // makes timer repeat itself after elapsing
-
-    let observable = timer.Elapsed
-
-    let task =
-        async {
-            timer.Start()
-            do! Async.Sleep 120000 // run for a minute and a half; removing this will make it run indefinitely
-            timer.Stop() // stop timer
-        }
-
-    (task, observable)
-
 [<EntryPoint>]
 let main _ =
-    use httpClient = new HttpClient()
+    let testJson =
+        "{'status':'SUCCESS', 'yourIp':'192.168.1.1'}"
 
-    let (timer, eventStream) = createObservableTimer 1000
-
-    eventStream
-    |> Observable.subscribe (fun _ -> printfn "tick %A" System.DateTime.Now)
-    |> ignore
+    Decode.fromString Domain.DNSRecord.PBPingResponse.decoder testJson
+    |> (printfn "%A")
 
     0
