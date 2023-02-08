@@ -1,8 +1,8 @@
-namespace Domain
+namespace DNSRecord
 
 open Thoth.Json.Net
 
-module DNSRecord =
+module Ping =
     type PBPingCommand =
         { SecretAPIKey: string
           APIKey: string }

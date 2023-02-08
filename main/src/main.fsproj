@@ -3,14 +3,17 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
+    <UserSecretsId>be3ea9d9-5c48-4466-a04b-61df2653e6f3</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="DNSRecord.Types.fs" />
+    <Compile Include="Ping.Types.fs" />
+    <Compile Include="Secrets.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
     <PackageReference Include="Thoth.Json.Net" Version="11.0.0" />
   </ItemGroup>
 
