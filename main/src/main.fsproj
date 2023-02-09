@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Ping.Types.fs" />
+    <Compile Include="Ping.Functions.fs" />
     <Compile Include="EditDNSRecord.Types.fs" />
     <Compile Include="Secrets.fs" />
     <Compile Include="Program.fs" />

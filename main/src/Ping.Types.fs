@@ -1,5 +1,7 @@
 namespace DNSRecord
 
+open System.Net.Http
+
 open Thoth.Json.Net
 
 module Ping =
@@ -11,9 +13,20 @@ module Ping =
 
     type PBPingFailureResponse = { Status: string; Message: string }
 
+    type IPAddress = IPAddress of string
+
     type PBPingResponse =
         | PBPingSuccess of PBPingSuccessResponse
         | PBPingFailure of PBPingFailureResponse
+
+    type PBPingError =
+        | InvalidAPIKey
+        | JSONDecodeFailure of string
+        | Unknown
+
+    type PBPingResult = Result<IPAddress, PBPingError>
+
+    type FetchIP = HttpClient -> PBPingCommand -> Async<PBPingResult>
 
     // Thoth coders
     module PBPingCommand =

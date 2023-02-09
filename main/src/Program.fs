@@ -1,47 +1,21 @@
 ﻿open System.Net.Http
 open Thoth.Json.Net
 
-open DNSRecord.Ping
-open DNSRecord.EditDNSRecord
+open Functions.Ping
+
 
 [<Literal>]
-let PorkBunPingURL = "https://porkbun.com/api/json/v3/ping"
-
-
-// step 1: find public IP
-let findPublicIP (withClient: HttpClient) =
-    let ipUrl = "https://icanhazip.com"
-
-    async {
-        let! pubIp =
-            withClient.GetStringAsync(ipUrl)
-            |> Async.AwaitTask
-
-        return pubIp
-    }
+let PorkBunEditDNSURL = "https://porkbun.com/api/json/v3/edit"
 
 [<EntryPoint>]
 let main _ =
+    use client = new HttpClient()
 
-    let sampleRq =
-        "{'secretapikey':'secret', 'apikey':'notsecret', 'name':'www', 'type':'A', 'content': '192.168.1.1', 'ttl': '600'}"
+    async {
+        let! ipaddressResult = fetchIP client { SecretAPIKey = ""; APIKey = "" }
 
-    let sampleObj =
-        { SecretAPIKey = "secret"
-          APIKey = "notsecret"
-          Name = None
-          Type = "A"
-          Content = "192.168.1.1"
-          TTL = None
-          Prio = None }
-
-    Decode.fromString EditDNSRecordCommand.decoder sampleRq
-    |> (printfn "%A")
-
-    EditDNSRecordCommand.encoder sampleObj
-    |> (fun x -> x.ToString())
-    |> (printfn "%s")
-
-
+        printfn "%A" ipaddressResult
+    }
+    |> Async.RunSynchronously
 
     0
