@@ -8,7 +8,8 @@ open DNSRecord.Ping
 
 module Ping =
     [<Literal>]
-    let PingURL = "https://porkbun.com/api/json/v3/ping"
+    let PingURL =
+        "https://api-ipv4.porkbun.com/api/json/v3/ping"
 
     /// <summary>
     /// Fetches the public IP address of the client by pinging the PorkBun

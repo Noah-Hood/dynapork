@@ -1,18 +1,19 @@
 ﻿open System.Net.Http
-open Thoth.Json.Net
 
 open Functions.Ping
-
-
-[<Literal>]
-let PorkBunEditDNSURL = "https://porkbun.com/api/json/v3/edit"
 
 [<EntryPoint>]
 let main _ =
     use client = new HttpClient()
+    let secretKey = Secrets.PBAPISecretKey
+    let apiKey = Secrets.PBAPIKey
 
     async {
-        let! ipaddressResult = fetchIP client { SecretAPIKey = ""; APIKey = "" }
+        let! ipaddressResult =
+            fetchIP
+                client
+                { SecretAPIKey = secretKey
+                  APIKey = apiKey }
 
         printfn "%A" ipaddressResult
     }
