@@ -7,9 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="PorkBunError.Types.fs" />
     <Compile Include="Ping.Types.fs" />
     <Compile Include="Ping.Functions.fs" />
     <Compile Include="EditDNSRecord.Types.fs" />
+    <Compile Include="EditDNSRecord.Functions.fs" />
     <Compile Include="Secrets.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

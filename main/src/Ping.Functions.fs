@@ -4,7 +4,7 @@ open System.Net.Http
 open System.Text
 
 open Thoth.Json.Net
-open DNSRecord.Ping
+open Domain.Ping
 
 module Ping =
     [<Literal>]

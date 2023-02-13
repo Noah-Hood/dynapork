@@ -1,4 +1,4 @@
-namespace DNSRecord
+namespace Domain
 
 open System.Net.Http
 

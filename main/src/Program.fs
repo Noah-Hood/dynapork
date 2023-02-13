@@ -1,6 +1,8 @@
 ﻿open System.Net.Http
 
-open Functions.Ping
+open Functions.EditDNSRecord
+open Domain.EditDNSRecord
+
 
 [<EntryPoint>]
 let main _ =
@@ -8,14 +10,27 @@ let main _ =
     let secretKey = Secrets.PBAPISecretKey
     let apiKey = Secrets.PBAPIKey
 
-    async {
-        let! ipaddressResult =
-            fetchIP
-                client
-                { SecretAPIKey = secretKey
-                  APIKey = apiKey }
+    let bodyParams =
+        { SecretAPIKey = secretKey
+          APIKey = apiKey
+          Name = None
+          Type = "A"
+          Content = "8.8.8.8"
+          TTL = None
+          Prio = None }
 
-        printfn "%A" ipaddressResult
+    let urlParams =
+        { Domain = "noah-hood.io"
+          Subdomain = None }
+
+    let cmd =
+        { BodyParams = bodyParams
+          URLParams = urlParams }
+
+    async {
+        let! result = editRecord client cmd
+
+        printfn "%A" result
     }
     |> Async.RunSynchronously
 

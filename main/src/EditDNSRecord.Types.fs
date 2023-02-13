@@ -1,9 +1,10 @@
-namespace DNSRecord
+namespace Domain
 
+open System.Net.Http
 open Thoth.Json.Net
 
 module EditDNSRecord =
-    type EditDNSRecordCommand =
+    type EditDNSRecordBodyParams =
         { SecretAPIKey: string
           APIKey: string
           Name: string option
@@ -12,10 +13,28 @@ module EditDNSRecord =
           TTL: int option
           Prio: string option }
 
+    type EditDNSRecordURLParams =
+        { Domain: string
+          Subdomain: string option }
+
+    type EditDNSRecordCommand =
+        { BodyParams: EditDNSRecordBodyParams
+          URLParams: EditDNSRecordURLParams }
+
     type EditDNSRecordResponse = { Status: string }
 
-    module EditDNSRecordCommand =
-        let encoder (cmd: EditDNSRecordCommand) =
+    type EditDNSRecordError =
+        | APIError of string
+        | InvalidDomain
+        | InvalidRecordID
+        | ResultParseError of string
+
+    type EditDNSRecordResult = Result<EditDNSRecordResponse, EditDNSRecordError>
+
+    type EditRecord = HttpClient -> EditDNSRecordCommand -> Async<EditDNSRecordResult>
+
+    module EditDNSRecordBodyParams =
+        let encoder (cmd: EditDNSRecordBodyParams) =
             Encode.object [ "secretapikey", Encode.string cmd.SecretAPIKey
                             "apikey", Encode.string cmd.APIKey
                             "name", Encode.option Encode.string cmd.Name
@@ -24,15 +43,15 @@ module EditDNSRecord =
                             "ttl", Encode.option Encode.int cmd.TTL
                             "prio", Encode.option Encode.string cmd.Prio ]
 
-        let decoder: Decoder<EditDNSRecordCommand> =
+        let decoder: Decoder<EditDNSRecordBodyParams> =
             Decode.object (fun get ->
-                { EditDNSRecordCommand.SecretAPIKey = get.Required.Field "secretapikey" Decode.string
-                  EditDNSRecordCommand.APIKey = get.Required.Field "apikey" Decode.string
-                  EditDNSRecordCommand.Name = get.Optional.Field "name" Decode.string
-                  EditDNSRecordCommand.Type = get.Required.Field "type" Decode.string
-                  EditDNSRecordCommand.Content = get.Required.Field "content" Decode.string
-                  EditDNSRecordCommand.TTL = get.Optional.Field "ttl" Decode.int
-                  EditDNSRecordCommand.Prio = get.Optional.Field "prio" Decode.string })
+                { EditDNSRecordBodyParams.SecretAPIKey = get.Required.Field "secretapikey" Decode.string
+                  EditDNSRecordBodyParams.APIKey = get.Required.Field "apikey" Decode.string
+                  EditDNSRecordBodyParams.Name = get.Optional.Field "name" Decode.string
+                  EditDNSRecordBodyParams.Type = get.Required.Field "type" Decode.string
+                  EditDNSRecordBodyParams.Content = get.Required.Field "content" Decode.string
+                  EditDNSRecordBodyParams.TTL = get.Optional.Field "ttl" Decode.int
+                  EditDNSRecordBodyParams.Prio = get.Optional.Field "prio" Decode.string })
 
     module EditDNSRecordResponse =
         let encoder (rsp: EditDNSRecordResponse) =

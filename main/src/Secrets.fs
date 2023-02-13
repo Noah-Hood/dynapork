@@ -4,7 +4,7 @@ open Microsoft.Extensions.Configuration
 
 let config =
     (new ConfigurationBuilder())
-        .AddUserSecrets<DNSRecord.Ping.PBPingFailureResponse>()
+        .AddUserSecrets<Domain.Ping.PBPingFailureResponse>()
         .Build()
 
 let PBAPIKey = config.Item("pbapikey")
