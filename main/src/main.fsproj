@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Common.Types.fs" />
+    <Compile Include="Common.Functions.fs" />
     <Compile Include="PorkBunError.Types.fs" />
     <Compile Include="Ping.Types.fs" />
     <Compile Include="Ping.Functions.fs" />
