@@ -31,18 +31,11 @@ let main _ =
     let secretKey = Secrets.PBAPISecretKey
     let apiKey = Secrets.PBAPIKey
 
-    printfn "apikey: %s" apiKey
-    printfn "secret: %s" secretKey
-
-    let pingCmd: Domain.Ping.PBPingCommand =
-        { APIKey = apiKey
-          SecretAPIKey = secretKey }
-
     // let bodyParams =
     //     { SecretAPIKey = secretKey
     //       APIKey = apiKey
-    //       Name = None
-    //       Type = "A"
+    //       Name = Some "WWW" 
+    //       Type = A
     //       Content = "8.8.8.8"
     //       TTL = None
     //       Prio = None }
@@ -61,6 +54,8 @@ let main _ =
     //     printfn "%A" result
     // }
     // |> Async.RunSynchronously
+
+    let pingCmd: Domain.Ping.PBPingCommand = { APIKey = apiKey; SecretAPIKey = secretKey }
 
     async {
         let! pingResponse = Functions.Ping.fetchIP client pingCmd
