@@ -2,12 +2,37 @@
 
 open Functions.EditDNSRecord
 open Domain.EditDNSRecord
+open Domain.Ping
+open Domain.IPWatcher
+
+let createIPWatcher ipService interval =
+    let watcher = new IPWatcher()
+    let mutable ipAddress = IPAddress ""
+
+    let observable = watcher.IPChanged
+
+    let task =
+        async {
+            while true do
+                let! newestIP = ipService
+
+                if newestIP <> ipAddress then
+                    watcher.TriggerIPChange(newestIP)
+                    ipAddress <- newestIP
+
+                do! Async.Sleep(float interval)
+        }
+
+    (task, observable)
 
 [<EntryPoint>]
 let main _ =
     use client = new HttpClient()
     let secretKey = Secrets.PBAPISecretKey
     let apiKey = Secrets.PBAPIKey
+
+    printfn "apikey: %s" apiKey
+    printfn "secret: %s" secretKey
 
     let pingCmd: Domain.Ping.PBPingCommand =
         { APIKey = apiKey
