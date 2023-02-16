@@ -1,6 +1,7 @@
 ﻿open System.Net.Http
 
 open Functions.EditDNSRecord
+open Functions.Ping
 open Domain.EditDNSRecord
 open Domain.Ping
 open Domain.IPWatcher
@@ -14,16 +15,25 @@ let createIPWatcher ipService interval =
     let task =
         async {
             while true do
-                let! newestIP = ipService
+                printfn "Fetching new IP..."
+                let! newestIP = ipService ()
+                printfn "New ip: %A" newestIP
 
-                if newestIP <> ipAddress then
-                    watcher.TriggerIPChange(newestIP)
-                    ipAddress <- newestIP
+                match newestIP with
+                | Ok ipaddr ->
+                    if ipaddr <> ipAddress then
+                        printfn "Triggering IP Change..."
+                        watcher.TriggerIPChange(ipaddr)
+                        ipAddress <- ipaddr
+                | Error e -> printfn "failed to fetch IP: %A" e
 
-                do! Async.Sleep(float interval)
+                do! Async.Sleep(int interval)
         }
 
     (task, observable)
+
+let createIPService client cmd =
+    fun () -> async { return! fetchIP client cmd }
 
 [<EntryPoint>]
 let main _ =
@@ -31,36 +41,18 @@ let main _ =
     let secretKey = Secrets.PBAPISecretKey
     let apiKey = Secrets.PBAPIKey
 
-    // let bodyParams =
-    //     { SecretAPIKey = secretKey
-    //       APIKey = apiKey
-    //       Name = Some "WWW" 
-    //       Type = A
-    //       Content = "8.8.8.8"
-    //       TTL = None
-    //       Prio = None }
+    let pingCmd: Domain.Ping.PBPingCommand =
+        { APIKey = apiKey
+          SecretAPIKey = secretKey }
 
-    // let urlParams =
-    //     { Domain = "noah-hood.io"
-    //       Subdomain = None }
+    let ipsvc = createIPService client pingCmd
 
-    // let cmd =
-    //     { BodyParams = bodyParams
-    //       URLParams = urlParams }
+    let task, observable = createIPWatcher ipsvc 10000
 
-    // async {
-    //     let! result = editRecord client cmd
+    observable
+    |> Observable.subscribe (fun e -> printfn "Updating DNS Record: %A" e)
+    |> ignore
 
-    //     printfn "%A" result
-    // }
-    // |> Async.RunSynchronously
-
-    let pingCmd: Domain.Ping.PBPingCommand = { APIKey = apiKey; SecretAPIKey = secretKey }
-
-    async {
-        let! pingResponse = Functions.Ping.fetchIP client pingCmd
-        printfn "%A" pingResponse
-    }
-    |> Async.RunSynchronously
+    task |> Async.RunSynchronously
 
     0
