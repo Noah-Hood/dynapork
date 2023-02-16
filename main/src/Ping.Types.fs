@@ -19,6 +19,8 @@ module Ping =
         | InvalidAPIKey
         | JSONDecodeFailure of string
         | APIError of string
+        | RequestError of string
+        | GenericRequestError of string
 
     type PBPingResult = Result<IPAddress, PBPingError>
 

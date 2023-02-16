@@ -33,26 +33,38 @@ module Ping =
             let cmdStrContent = jsonToStringContent cmdJSON
 
             async {
-                let! result =
-                    client.PostAsync(PingURL, cmdStrContent)
-                    |> Async.AwaitTask
+                try
+                    let! result =
+                        client.PostAsync(PingURL, cmdStrContent)
+                        |> Async.AwaitTask
 
-                let! contentString = result.Content |> httpContentToString
+                    let! contentString = result.Content |> httpContentToString
 
-                return
-                    match result.IsSuccessStatusCode with
-                    | true ->
-                        let successValue =
-                            Decode.fromString PBPingSuccessResponse.decoder contentString
+                    return
+                        match result.IsSuccessStatusCode with
+                        | true ->
+                            let successValue =
+                                Decode.fromString PBPingSuccessResponse.decoder contentString
 
-                        match successValue with
-                        | Ok s -> s.YourIP |> IPAddress |> Ok
-                        | Error e -> e |> JSONDecodeFailure |> Error
-                    | false ->
-                        let failureValue =
-                            Decode.fromString PBPingFailureResponse.decoder contentString
+                            match successValue with
+                            | Ok s -> s.YourIP |> IPAddress |> Ok
+                            | Error e -> e |> JSONDecodeFailure |> Error
+                        | false ->
+                            let failureValue =
+                                Decode.fromString PBPingFailureResponse.decoder contentString
 
-                        match failureValue with
-                        | Ok s -> parseErrorMessage s.Message
-                        | Error e -> e |> JSONDecodeFailure |> Error
+                            match failureValue with
+                            | Ok s -> parseErrorMessage s.Message
+                            | Error e -> e |> JSONDecodeFailure |> Error
+                with
+                | :? HttpRequestException as e ->
+                    return
+                        $"Failed to fetch IP; check internet connection: {e.Message}"
+                        |> RequestError
+                        |> Error
+                | _ as e ->
+                    return
+                        $"Failed to fetch IP: {e.Message}"
+                        |> GenericRequestError
+                        |> Error
             }

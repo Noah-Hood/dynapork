@@ -1,37 +1,30 @@
 ﻿open System.Net.Http
 
-open Functions.EditDNSRecord
 open Functions.Ping
-open Domain.EditDNSRecord
+open Functions.IPWatcher
 open Domain.Ping
 open Domain.IPWatcher
 
-let createIPWatcher ipService interval =
-    let watcher = new IPWatcher()
-    let mutable ipAddress = IPAddress ""
 
-    let observable = watcher.IPChanged
+/// <summary>Creates and returns an NLog Logger, preconfigured
+/// to use the console to log</summary>
+let createLogger () =
+    let config = new NLog.Config.LoggingConfiguration()
 
-    let task =
-        async {
-            while true do
-                printfn "Fetching new IP..."
-                let! newestIP = ipService ()
-                printfn "New ip: %A" newestIP
+    let logConsole =
+        new NLog.Targets.ColoredConsoleTarget("logconsole")
 
-                match newestIP with
-                | Ok ipaddr ->
-                    if ipaddr <> ipAddress then
-                        printfn "Triggering IP Change..."
-                        watcher.TriggerIPChange(ipaddr)
-                        ipAddress <- ipaddr
-                | Error e -> printfn "failed to fetch IP: %A" e
+    config.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, logConsole)
 
-                do! Async.Sleep(int interval)
-        }
+    NLog.LogManager.Configuration <- config
 
-    (task, observable)
+    let logger = NLog.LogManager.GetCurrentClassLogger()
 
+    logger
+
+
+/// <summary>Wraps fetchIP in a function which bakes-in the
+/// HTTPClient and command (credentials) for pinging</summary>
 let createIPService client cmd =
     fun () -> async { return! fetchIP client cmd }
 
@@ -41,18 +34,23 @@ let main _ =
     let secretKey = Secrets.PBAPISecretKey
     let apiKey = Secrets.PBAPIKey
 
-    let pingCmd: Domain.Ping.PBPingCommand =
-        { APIKey = apiKey
-          SecretAPIKey = secretKey }
+    printfn "%s" apiKey
+    printfn "%s" secretKey
 
-    let ipsvc = createIPService client pingCmd
+    // let pingCmd: Domain.Ping.PBPingCommand =
+    //     { APIKey = apiKey
+    //       SecretAPIKey = secretKey }
 
-    let task, observable = createIPWatcher ipsvc 10000
+    // let ipsvc = createIPService client pingCmd
 
-    observable
-    |> Observable.subscribe (fun e -> printfn "Updating DNS Record: %A" e)
-    |> ignore
+    // let logger = createLogger ()
 
-    task |> Async.RunSynchronously
+    // let task, observable = createIPWatcher logger ipsvc 10000
+
+    // observable
+    // |> Observable.subscribe (fun e -> logger.Info($"Updating ip DNS record to match {e}"))
+    // |> ignore
+
+    // task |> Async.RunSynchronously
 
     0

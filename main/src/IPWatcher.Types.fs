@@ -1,5 +1,6 @@
 namespace Domain
 
+open System.Net.Http
 open Domain.Ping
 
 module IPWatcher =
@@ -10,3 +11,7 @@ module IPWatcher =
         member this.IPChanged = iPChanged.Publish
 
         member this.TriggerIPChange(address) = iPChanged.Trigger(address)
+
+
+    type CreateIPWatcher =
+        NLog.Logger -> (unit -> Async<PBPingResult>) -> int -> Async<unit> * IEvent<Handler<IPAddress>, IPAddress>

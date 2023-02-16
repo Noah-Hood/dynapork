@@ -19,3 +19,6 @@ bin
 TestResults/
 
 # End of https://www.toptal.com/developers/gitignore/api/fsharp
+
+# Sensitive application config
+appsettings*.json
