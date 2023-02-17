@@ -1,4 +1,5 @@
-﻿open System.Net.Http
+﻿open Microsoft.Extensions.Configuration
+open System.Net.Http
 
 open Functions.Ping
 open Functions.IPWatcher
@@ -22,35 +23,55 @@ let createLogger () =
 
     logger
 
-
 /// <summary>Wraps fetchIP in a function which bakes-in the
 /// HTTPClient and command (credentials) for pinging</summary>
 let createIPService client cmd =
     fun () -> async { return! fetchIP client cmd }
 
+[<CLIMutable>]
+type EnvironmentVariables =
+    { Environment: string
+      DomainName: string }
+
 [<EntryPoint>]
 let main _ =
-    use client = new HttpClient()
-    let secretKey = Secrets.PBAPISecretKey
-    let apiKey = Secrets.PBAPIKey
+    let environment =
+        System.Environment.GetEnvironmentVariable("environment")
 
-    printfn "%s" apiKey
-    printfn "%s" secretKey
+    let config =
+        match environment.ToLowerInvariant() with
+        | "development"
+        | "dev"
+        | "develop" ->
+            (new ConfigurationBuilder())
+                .AddUserSecrets<Domain.Ping.PBPingCommand>()
+                .Build()
+        | "production"
+        | "prod" ->
+            (new ConfigurationBuilder())
+                .AddKeyPerFile("/var/secrets", true)
+                .Build()
+        | _ -> failwith "'environment' environment variable must be set to one of 'production' or 'development"
 
-    // let pingCmd: Domain.Ping.PBPingCommand =
-    //     { APIKey = apiKey
-    //       SecretAPIKey = secretKey }
 
-    // let ipsvc = createIPService client pingCmd
+    let apiKey = config.Item("APIKey")
+    let secretKey = config.Item("SecretKey")
 
-    // let logger = createLogger ()
+    match System.String.IsNullOrEmpty(apiKey), System.String.IsNullOrEmpty(secretKey) with
+    | true, true ->
+        failwith
+            "Both ApiKey and SecretKey are empty; both must be set either as a User Secret for development or a Docker secret in production."
+    | true, false ->
+        failwith
+            "ApiKey is empty; both ApiKey and SecretKey must be set either as a User Secret for development or a Docker secret in production."
+    | false, true ->
+        failwith
+            "SecretKey is empty; both ApiKey and SecretKey must be set either as a User Secret for development or a Docker secret in production."
+    | false, false -> ()
 
-    // let task, observable = createIPWatcher logger ipsvc 10000
 
-    // observable
-    // |> Observable.subscribe (fun e -> logger.Info($"Updating ip DNS record to match {e}"))
-    // |> ignore
-
-    // task |> Async.RunSynchronously
+    // use client = new HttpClient()
+    // let secretKey = Secrets.PBAPISecretKey
+    // let apiKey = Secrets.PBAPIKey
 
     0
