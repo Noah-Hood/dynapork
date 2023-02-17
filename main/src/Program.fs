@@ -45,11 +45,13 @@ let main _ =
         | "develop" ->
             (new ConfigurationBuilder())
                 .AddUserSecrets<Domain.Ping.PBPingCommand>()
+                .AddEnvironmentVariables()
                 .Build()
         | "production"
         | "prod" ->
             (new ConfigurationBuilder())
                 .AddKeyPerFile("/var/secrets", true)
+                .AddEnvironmentVariables()
                 .Build()
         | _ -> failwith "'environment' environment variable must be set to one of 'production' or 'development"
 
@@ -69,9 +71,27 @@ let main _ =
             "SecretKey is empty; both ApiKey and SecretKey must be set either as a User Secret for development or a Docker secret in production."
     | false, false -> ()
 
+    let domainName = config.Item("DomainName")
 
-    // use client = new HttpClient()
-    // let secretKey = Secrets.PBAPISecretKey
-    // let apiKey = Secrets.PBAPIKey
+    if System.String.IsNullOrEmpty(domainName) then
+        failwith
+            "DomainName environment variable is empty; must be set to the domain for which DynaPork updates the A record."
+
+    let pingCmd: Domain.Ping.PBPingCommand =
+        { APIKey = apiKey
+          SecretAPIKey = secretKey }
+
+    use client = new HttpClient()
+    let logger = createLogger ()
+
+    let ipSvc = createIPService client pingCmd
+
+    let (task, observable) = createIPWatcher logger ipSvc 10000
+
+    observable
+    |> Observable.subscribe (fun x -> logger.Info($"Updating DNS Record with new IP: {x}"))
+    |> ignore
+
+    task |> Async.RunSynchronously
 
     0
