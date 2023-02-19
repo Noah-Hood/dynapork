@@ -1,10 +1,11 @@
 ﻿open Microsoft.Extensions.Configuration
 open System.Net.Http
 
+open Functions.EditDNSRecord
 open Functions.Ping
 open Functions.IPWatcher
 open Domain.Ping
-open Domain.IPWatcher
+open Domain.EditDNSRecord
 
 
 /// <summary>Creates and returns an NLog Logger, preconfigured
@@ -12,8 +13,7 @@ open Domain.IPWatcher
 let createLogger () =
     let config = new NLog.Config.LoggingConfiguration()
 
-    let logConsole =
-        new NLog.Targets.ColoredConsoleTarget("logconsole")
+    let logConsole = new NLog.Targets.ColoredConsoleTarget("logconsole")
 
     config.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, logConsole)
 
@@ -35,8 +35,10 @@ type EnvironmentVariables =
 
 [<EntryPoint>]
 let main _ =
-    let environment =
-        System.Environment.GetEnvironmentVariable("environment")
+    let environment = System.Environment.GetEnvironmentVariable("environment")
+
+    if System.String.IsNullOrEmpty(environment) then
+        failwith "Environment variable must be set to one of development or production."
 
     let config =
         match environment.ToLowerInvariant() with
@@ -86,10 +88,38 @@ let main _ =
 
     let ipSvc = createIPService client pingCmd
 
-    let (task, observable) = createIPWatcher logger ipSvc 10000
+    let (task, observable) = createIPWatcher logger ipSvc (5 * 60 * 1000)
 
     observable
-    |> Observable.subscribe (fun x -> logger.Info($"Updating DNS Record with new IP: {x}"))
+    |> Observable.subscribe (fun (IPAddress x) ->
+        logger.Info($"Updating DNS Record with new IP: {x}...")
+
+        let urlParams: URLParams =
+            { Domain = domainName
+              Subdomain = None }
+
+        let bodyParams: BodyParams =
+            { SecretAPIKey = secretKey
+              APIKey = apiKey
+              Name = Some "*"
+              Type = A
+              Content = x
+              TTL = Some 600
+              Prio = None }
+
+        let editCmd =
+            { BodyParams = bodyParams
+              URLParams = urlParams }
+
+        async {
+            let! result = editRecord client editCmd
+
+            match result with
+            | Ok _ -> logger.Info($"Updated A record for {domainName} to {x} successfully.")
+            | Error e -> logger.Error($"Failed to update A record for {domainName} to {x}: {e}")
+
+        }
+        |> Async.RunSynchronously)
     |> ignore
 
     task |> Async.RunSynchronously
