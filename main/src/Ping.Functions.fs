@@ -2,14 +2,21 @@ namespace Functions
 
 open System.Net.Http
 open System.Text
-
 open Thoth.Json.Net
+
 open Domain.Ping
+open Functions.Common
 
 module Ping =
     [<Literal>]
-    let PingURL =
+    let private PingURL =
         "https://api-ipv4.porkbun.com/api/json/v3/ping"
+
+    let private parseErrorMessage (msg: string) =
+        match msg.ToLower() with
+        | "invalid api key. (002)" -> InvalidAPIKey
+        | _ -> msg |> APIError
+        |> Error
 
     /// <summary>
     /// Fetches the public IP address of the client by pinging the PorkBun
@@ -23,26 +30,41 @@ module Ping =
         fun client cmd ->
             let cmdJSON = PBPingCommand.encoder cmd
 
-            let cmdStrContent =
-                new StringContent(cmdJSON.ToString(), Encoding.UTF8, "application/json")
+            let cmdStrContent = jsonToStringContent cmdJSON
 
             async {
-                let! result =
-                    client.PostAsync(PingURL, cmdStrContent)
-                    |> Async.AwaitTask
+                try
+                    let! result =
+                        client.PostAsync(PingURL, cmdStrContent)
+                        |> Async.AwaitTask
 
-                let! content =
-                    result.Content.ReadAsStringAsync()
-                    |> Async.AwaitTask
+                    let! contentString = result.Content |> httpContentToString
 
-                let decodeResult =
-                    Decode.fromString PBPingResponse.decoder content
+                    return
+                        match result.IsSuccessStatusCode with
+                        | true ->
+                            let successValue =
+                                Decode.fromString PBPingSuccessResponse.decoder contentString
 
-                return
-                    match decodeResult with
-                    | Ok r ->
-                        match r with
-                        | PBPingSuccess s -> (IPAddress s.YourIP) |> Ok // successfully retrieved, decoded; valid result
-                        | PBPingFailure _ -> InvalidAPIKey |> Error // successfully retrieved, decoded; invalid result
-                    | Error e -> (JSONDecodeFailure e) |> Error // successfully retrieved, unsuccessfully decoded
+                            match successValue with
+                            | Ok s -> s.YourIP |> IPAddress |> Ok
+                            | Error e -> e |> JSONDecodeFailure |> Error
+                        | false ->
+                            let failureValue =
+                                Decode.fromString PBPingFailureResponse.decoder contentString
+
+                            match failureValue with
+                            | Ok s -> parseErrorMessage s.Message
+                            | Error e -> e |> JSONDecodeFailure |> Error
+                with
+                | :? HttpRequestException as e ->
+                    return
+                        $"Failed to fetch IP; check internet connection: {e.Message}"
+                        |> RequestError
+                        |> Error
+                | _ as e ->
+                    return
+                        $"Failed to fetch IP: {e.Message}"
+                        |> GenericRequestError
+                        |> Error
             }

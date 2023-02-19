@@ -11,10 +11,11 @@ module EditDNSRecord =
     let private BaseURL =
         "https://porkbun.com/api/json/v3/dns/editByNameType"
 
-    let private parseError errorMsg =
-        match errorMsg with
-        | "Invalid Domain." -> InvalidDomain
-        | "Invalid record ID." -> InvalidRecordID
+    let private parseError (errorMsg: string) =
+        match errorMsg.ToLower() with
+        | "invalid domain." -> InvalidDomain
+        | "invalid record id." -> InvalidRecordID
+        | "edit error: we were unable to edit the dns record." -> SameContentError
         | x -> APIError x
         |> Error
 
@@ -31,7 +32,7 @@ module EditDNSRecord =
             let { Domain = domain } = urlParams
 
             let bodyJson =
-                EditDNSRecordBodyParams.encoder bodyParams
+                BodyParams.encoder bodyParams
 
             let strContent =
                 new StringContent(bodyJson.ToString(), Encoding.UTF8, "application/json")
