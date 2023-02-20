@@ -10,12 +10,15 @@
     <Compile Include="Common.Types.fs" />
     <Compile Include="Common.Functions.fs" />
     <Compile Include="PorkBunError.Types.fs" />
+    <Compile Include="Environment.Types.fs" />
+    <Compile Include="Environment.Functions.fs" />
     <Compile Include="Ping.Types.fs" />
     <Compile Include="Ping.Functions.fs" />
     <Compile Include="EditDNSRecord.Types.fs" />
     <Compile Include="EditDNSRecord.Functions.fs" />
     <Compile Include="IPWatcher.Types.fs" />
     <Compile Include="IPWatcher.Functions.fs" />
+
     <Compile Include="Program.fs" />
   </ItemGroup>
 

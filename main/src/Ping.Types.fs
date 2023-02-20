@@ -4,11 +4,10 @@ open System.Net.Http
 
 open Thoth.Json.Net
 open PorkBunError
+open Domain.Environment
 
 module Ping =
-    type PBPingCommand =
-        { SecretAPIKey: string
-          APIKey: string }
+    type PBPingCommand = Credentials
 
     type PBPingSuccessResponse = { Status: string; YourIP: string }
     type PBPingFailureResponse = { Status: string; Message: string }
@@ -29,13 +28,21 @@ module Ping =
     // Thoth coders
     module PBPingCommand =
         let encoder (cmd: PBPingCommand) =
-            Encode.object [ "secretapikey", Encode.string cmd.SecretAPIKey
-                            "apikey", Encode.string cmd.APIKey ]
+            let { APIKey = (APIKey apiKey)
+                  SecretKey = (SecretKey secret) } =
+                cmd
+
+            Encode.object [ "secretapikey", Encode.string secret
+                            "apikey", Encode.string apiKey ]
 
         let decoder: Decoder<PBPingCommand> =
             Decode.object (fun get ->
-                { PBPingCommand.SecretAPIKey = get.Required.Field "secretapikey" Decode.string
-                  PBPingCommand.APIKey = get.Required.Field "apikey" Decode.string })
+                { PBPingCommand.SecretKey =
+                    get.Required.Field "secretapikey" Decode.string
+                    |> SecretKey
+                  PBPingCommand.APIKey =
+                    get.Required.Field "apikey" Decode.string
+                    |> APIKey })
 
     module PBPingSuccessResponse =
         let encoder (successResponse: PBPingSuccessResponse) =
@@ -50,3 +57,10 @@ module Ping =
     module PBPingFailureResponse =
         let encoder = PBErrorResponse.encoder
         let decoder = PBErrorResponse.decoder
+
+    module IPAddress =
+        let encoder (IPAddress a) = Encode.string a
+
+        let decoder: Decoder<IPAddress> =
+            Decode.index 0 Decode.string
+            |> Decode.map IPAddress

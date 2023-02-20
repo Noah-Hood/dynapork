@@ -3,8 +3,11 @@ namespace Domain
 open System.Net.Http
 open Thoth.Json.Net
 
+open Domain.Environment
+open Domain.Ping
+
 module EditDNSRecord =
-    type RecordType = 
+    type RecordType =
         | A
         | MX
         | CNAME
@@ -17,20 +20,18 @@ module EditDNSRecord =
         | CAA
 
     type BodyParams =
-        { SecretAPIKey: string
-          APIKey: string
-          Name: string option
-          Type: RecordType
-          Content: string
+        { Content: IPAddress
           TTL: int option
           Prio: string option }
 
     type URLParams =
-        { Domain: string
-          Subdomain: string option }
+        { Domain: DomainName
+          Subdomain: Subdomain option
+          RecordType: RecordType }
 
     type EditDNSRecordCommand =
-        { BodyParams: BodyParams
+        { Credentials: Credentials
+          BodyParams: BodyParams
           URLParams: URLParams }
 
     type EditDNSRecordResponse = { Status: string }
@@ -46,8 +47,8 @@ module EditDNSRecord =
 
     type EditRecord = HttpClient -> EditDNSRecordCommand -> Async<EditDNSRecordResult>
 
-    module RecordType = 
-        let encoder (rt: RecordType) = 
+    module RecordType =
+        let recordTypeToString rt =
             match rt with
             | A -> "A"
             | MX -> "MX"
@@ -59,12 +60,14 @@ module EditDNSRecord =
             | SRV -> "SRV"
             | TLSA -> "TLSA"
             | CAA -> "CAA"
-            |> Encode.string
 
-        let decoder : Decoder<RecordType> = 
+        let encoder (rt: RecordType) =
+            rt |> recordTypeToString |> Encode.string
+
+        let decoder: Decoder<RecordType> =
             Decode.index 0 Decode.string
-            |> Decode.andThen (fun rts -> 
-                let res = 
+            |> Decode.andThen (fun rts ->
+                let res =
                     match rts with
                     | "A" -> Ok A
                     | "MX" -> Ok MX
@@ -80,29 +83,45 @@ module EditDNSRecord =
 
                 match res with
                 | Ok a -> a |> Decode.succeed
-                | Error e -> Decode.fail $"Invalid RecordType received: {e}"
-                )
+                | Error e -> Decode.fail $"Invalid RecordType received: {e}")
 
 
     module BodyParams =
         let encoder (cmd: BodyParams) =
-            Encode.object [ "secretapikey", Encode.string cmd.SecretAPIKey
-                            "apikey", Encode.string cmd.APIKey
-                            "name", Encode.option Encode.string cmd.Name
-                            "type", RecordType.encoder cmd.Type
-                            "content", Encode.string cmd.Content
+            let { Content = IPAddress content } = cmd
+
+            Encode.object [ "content", Encode.string content
                             "ttl", Encode.option Encode.int cmd.TTL
                             "prio", Encode.option Encode.string cmd.Prio ]
 
         let decoder: Decoder<BodyParams> =
             Decode.object (fun get ->
-                { BodyParams.SecretAPIKey = get.Required.Field "secretapikey" Decode.string
-                  BodyParams.APIKey = get.Required.Field "apikey" Decode.string
-                  BodyParams.Name = get.Optional.Field "name" Decode.string
-                  BodyParams.Type = get.Required.Field "type" RecordType.decoder
-                  BodyParams.Content = get.Required.Field "content" Decode.string
+                { BodyParams.Content =
+                    get.Required.Field "content" Decode.string
+                    |> IPAddress
                   BodyParams.TTL = get.Optional.Field "ttl" Decode.int
                   BodyParams.Prio = get.Optional.Field "prio" Decode.string })
+
+    module EditDNSRecordCommand =
+        let encoder (cmd: EditDNSRecordCommand) =
+            let { Credentials = credentials
+                  BodyParams = bodyParams } =
+                cmd
+
+            let { APIKey = apiKey
+                  SecretKey = secretKey } =
+                credentials
+
+            let { Content = content
+                  TTL = ttl
+                  Prio = prio } =
+                bodyParams
+
+            Encode.object [ "content", IPAddress.encoder content
+                            "ttl", Encode.option Encode.int ttl
+                            "prio", Encode.option Encode.string prio
+                            "apikey", APIKey.encoder apiKey
+                            "secretapikey", SecretKey.encoder secretKey ]
 
     module EditDNSRecordResponse =
         let encoder (rsp: EditDNSRecordResponse) =

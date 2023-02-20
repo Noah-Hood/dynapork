@@ -5,6 +5,7 @@ open System.Text
 open Thoth.Json.Net
 
 open Domain.EditDNSRecord
+open Domain.Environment
 
 module EditDNSRecord =
     [<Literal>]
@@ -19,27 +20,43 @@ module EditDNSRecord =
         | x -> APIError x
         |> Error
 
+    let private addDomainToUrl (DomainName domain) urlStr = urlStr + "/" + domain
+
+    let private addRecordTypeToUrl rType urlStr =
+        let rString = RecordType.recordTypeToString rType
+
+        urlStr + "/" + rString
+
+    let private addSubdomainToUrl subdomain urlStr =
+        match subdomain with
+        | Some (Subdomain s) -> urlStr + "/" + s
+        | None -> urlStr
+
     let editRecord: EditRecord =
         (fun client cmd ->
             // destructure command
-            let { BodyParams = bodyParams
-                  URLParams = urlParams } =
-                cmd
-
-            let { Type = recordType } = bodyParams
+            let { URLParams = urlParams } = cmd
 
             // destructure URL params
-            let { Domain = domain } = urlParams
+            let { URLParams.Domain = domain
+                  URLParams.Subdomain = subdomain
+                  URLParams.RecordType = recordType } =
+                urlParams
 
-            let bodyJson =
-                BodyParams.encoder bodyParams
+            let bodyJson = EditDNSRecordCommand.encoder cmd
 
             let strContent =
                 new StringContent(bodyJson.ToString(), Encoding.UTF8, "application/json")
 
+            let url =
+                BaseURL
+                |> addDomainToUrl domain
+                |> addRecordTypeToUrl recordType
+                |> addSubdomainToUrl subdomain
+
             async {
                 let! response =
-                    client.PostAsync($"{BaseURL}/{domain}/{recordType}", strContent)
+                    client.PostAsync(url, strContent)
                     |> Async.AwaitTask
 
                 return
