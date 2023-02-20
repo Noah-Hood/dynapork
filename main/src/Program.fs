@@ -1,5 +1,4 @@
-﻿open Microsoft.Extensions.Configuration
-open System.Net.Http
+﻿open System.Net.Http
 
 open Functions.Environment
 open Functions.EditDNSRecord
@@ -34,22 +33,17 @@ let createIPService client cmd =
 [<EntryPoint>]
 let main _ =
     let environment =
-        System.Environment.GetEnvironmentVariable("environment")
-        |> ProgramEnvironment
+        System.Environment.GetEnvironmentVariable("ENVIRONMENT")
+        |> loadProgramEnvironment
 
     let { Credentials = credentials
-          Domain = domainName
-          Subdomain = subdomain } =
+          DomainInfo = domainInfo} =
         loadEnvironment environment
-
-    let pingCmd: Domain.Ping.PBPingCommand =
-        { APIKey = credentials.APIKey
-          SecretKey = credentials.SecretKey }
 
     use client = new HttpClient()
     let logger = createLogger ()
 
-    let ipSvc = createIPService client pingCmd
+    let ipSvc = createIPService client credentials
 
     let (task, observable) =
         createIPWatcher logger ipSvc (5 * 60 * 1000)
@@ -59,9 +53,9 @@ let main _ =
         logger.Info($"Updating DNS Record with new IP: {x}...")
 
         let urlParams: URLParams =
-            { Domain = domainName
-              RecordType = A
-              Subdomain = Some(Subdomain "VPN") }
+            { Domain = domainInfo.Domain
+              RecordType = domainInfo.RecordType
+              Subdomain = domainInfo.Subdomain }
 
         let bodyParams: BodyParams =
             { Content = IPAddress x
@@ -77,8 +71,8 @@ let main _ =
             let! result = editRecord client editCmd
 
             match result with
-            | Ok _ -> logger.Info($"Updated A record for {domainName} to {x} successfully.")
-            | Error e -> logger.Error($"Failed to update A record for {domainName} to {x}: {e}")
+            | Ok _ -> logger.Info($"Updated A record for {domainInfo.Domain} to {x} successfully.")
+            | Error e -> logger.Error($"Failed to update A record for {domainInfo.Domain} to {x}: {e}")
 
         }
         |> Async.RunSynchronously)

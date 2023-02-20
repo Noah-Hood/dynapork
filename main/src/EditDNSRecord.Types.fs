@@ -7,18 +7,6 @@ open Domain.Environment
 open Domain.Ping
 
 module EditDNSRecord =
-    type RecordType =
-        | A
-        | MX
-        | CNAME
-        | ALIAS
-        | TXT
-        | NS
-        | AAAA
-        | SRV
-        | TLSA
-        | CAA
-
     type BodyParams =
         { Content: IPAddress
           TTL: int option
@@ -46,45 +34,6 @@ module EditDNSRecord =
     type EditDNSRecordResult = Result<EditDNSRecordResponse, EditDNSRecordError>
 
     type EditRecord = HttpClient -> EditDNSRecordCommand -> Async<EditDNSRecordResult>
-
-    module RecordType =
-        let recordTypeToString rt =
-            match rt with
-            | A -> "A"
-            | MX -> "MX"
-            | CNAME -> "CNAME"
-            | ALIAS -> "ALIAS"
-            | TXT -> "TXT"
-            | NS -> "NS"
-            | AAAA -> "AAAA"
-            | SRV -> "SRV"
-            | TLSA -> "TLSA"
-            | CAA -> "CAA"
-
-        let encoder (rt: RecordType) =
-            rt |> recordTypeToString |> Encode.string
-
-        let decoder: Decoder<RecordType> =
-            Decode.index 0 Decode.string
-            |> Decode.andThen (fun rts ->
-                let res =
-                    match rts with
-                    | "A" -> Ok A
-                    | "MX" -> Ok MX
-                    | "CNAME" -> Ok CNAME
-                    | "ALIAS" -> Ok ALIAS
-                    | "TXT" -> Ok TXT
-                    | "NS" -> Ok NS
-                    | "AAAA" -> Ok AAAA
-                    | "SRV" -> Ok SRV
-                    | "TLSA" -> Ok TLSA
-                    | "CAA" -> Ok CAA
-                    | x -> Error x // if not one of these, disallowed
-
-                match res with
-                | Ok a -> a |> Decode.succeed
-                | Error e -> Decode.fail $"Invalid RecordType received: {e}")
-
 
     module BodyParams =
         let encoder (cmd: BodyParams) =

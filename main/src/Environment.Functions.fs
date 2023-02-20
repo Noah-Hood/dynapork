@@ -1,60 +1,76 @@
 namespace Functions
 
 open Microsoft.Extensions.Configuration
+open System
 
 open Domain.Environment
 
 module Environment =
+    let loadProgramEnvironment:LoadProgramEnvironment = 
+        fun s ->
+            match s.ToLowerInvariant() with
+            | "development" | "dev" | "develop" -> DEV
+            | "production" | "prod" -> PROD
+            | _ -> failwith "Environment environment variable must be set to one of 'dev' or 'prod.'"
+        
+    let private addEnvVars env (cfgBldr: IConfigurationBuilder) = 
+        cfgBldr.AddEnvironmentVariables()
+
+    let private addRuntimeSecrets env (cfgBldr: IConfigurationBuilder) = 
+        match env with
+        | DEV -> cfgBldr.AddUserSecrets<EnvironmentVariables>()
+        | PROD -> cfgBldr.AddKeyPerFile("/var/secrets", true)
+
+    let private tryGetItemFromConfig (config: IConfigurationRoot) (itemName: string) = 
+        let rawKey = config.Item(itemName)
+        match String.IsNullOrEmpty(rawKey) with
+        | true -> None
+        | false -> Some rawKey
+
+
     let loadEnvironment: LoadEnvironment =
-        fun (ProgramEnvironment env) ->
-            let config =
-                match env.ToLowerInvariant() with
-                | "development"
-                | "dev"
-                | "develop" ->
-                    (new ConfigurationBuilder())
-                        .AddUserSecrets<EnvironmentVariables>()
-                        .AddEnvironmentVariables()
-                        .Build()
-                | "production"
-                | "prod" ->
-                    (new ConfigurationBuilder())
-                        .AddKeyPerFile("/var/secrets", true)
-                        .AddEnvironmentVariables()
-                        .Build()
-                | _ -> failwith "'environment' environment variable must be set to one of 'production' or 'development"
+        fun env ->
+            let config = (new ConfigurationBuilder()) |> addEnvVars env |> addRuntimeSecrets env |> (fun x -> x.Build())
 
-            let apiKey = config.Item("APIKey")
-            let secretKey = config.Item("SecretKey")
+            let tryGetPartial = tryGetItemFromConfig config
 
-            match System.String.IsNullOrEmpty(apiKey), System.String.IsNullOrEmpty(secretKey) with
-            | true, true ->
-                failwith
-                    "Both ApiKey and SecretKey are empty; both must be set either as a User Secret for development or a Docker secret in production."
-            | true, false ->
-                failwith
-                    "ApiKey is empty; both ApiKey and SecretKey must be set either as a User Secret for development or a Docker secret in production."
-            | false, true ->
-                failwith
-                    "SecretKey is empty; both ApiKey and SecretKey must be set either as a User Secret for development or a Docker secret in production."
-            | false, false -> ()
+            let apiKey = 
+                match tryGetPartial "APIKEY" with
+                | Some a -> a |> APIKey
+                | None -> failwith "APIKEY environment variable must be set."
 
-            let domainName = config.Item("DomainName")
+            let secretKey = 
+                match tryGetPartial "SECRETKEY" with
+                | Some s -> s |> SecretKey
+                | None -> failwith "SECRETKEY environment variable must be set."
 
-            let subdomain =
-                match config.Item("Subdomain") with
-                | _ when System.String.IsNullOrEmpty(config.Item("subdomain")) -> None
-                | x -> x |> Subdomain |> Some
+            let domainName = 
+                match tryGetPartial "DOMAINNAME" with
+                | Some d -> d |> DomainName
+                | None -> failwith "DOMAINNAME environment variable must be set."
 
-            if System.String.IsNullOrEmpty(domainName) then
-                failwith
-                    "DomainName environment variable is empty; must be set to the domain for which DynaPork updates the A record."
+            let recordType = 
+                match tryGetPartial "RECORDTYPE" with
+                | Some r -> 
+                    match r |> RecordType.stringToRecordType with
+                    | Some rt -> rt
+                    | None -> failwith "RECORDTYPE environment variable set to invalid value. Must be onf of A, MX, CNAME, ALIAS, TXT, Ns, AAAA, ETV, TLSA, or CAA."
+                | None -> failwith "RECORDTYPE environment variable must be set."
+
+            let subdomain = 
+                match tryGetPartial "SUBDOMAIN" with    
+                | Some s -> s |> Subdomain |> Some
+                | None -> None
 
             let credentials =
-                { APIKey = apiKey |> APIKey
-                  SecretKey = secretKey |> SecretKey }
+                { APIKey = apiKey
+                  SecretKey = secretKey}
+
+            let domainInfo = {
+                Domain = domainName
+                Subdomain = subdomain
+                RecordType = recordType
+            }
 
             { Credentials = credentials
-              EnvironmentVariables.Domain = domainName |> DomainName
-              EnvironmentVariables.Subdomain = subdomain
-              EnvironmentVariables.Environment = (ProgramEnvironment env) }
+              DomainInfo = domainInfo }
