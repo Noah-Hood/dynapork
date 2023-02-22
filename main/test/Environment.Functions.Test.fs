@@ -4,6 +4,7 @@ open Expecto
 open Functions.Environment
 open Domain.Environment
 
+// scenario tests
 [<Tests>]
 let loadProgramEnvironmentTests =
     testList
@@ -43,6 +44,36 @@ let loadProgramEnvironmentTests =
               let result = loadProgramEnvironment "DEV"
 
               Expect.equal result DEV "did not return DEV when provided 'DEV'"
+
+          testCase "returns PROD for 'production"
+          <| fun _ ->
+              let result = loadProgramEnvironment "production"
+
+              Expect.equal result PROD "did not return PROD when provided 'production'"
+
+          testCase "returns PROD for 'prod'"
+          <| fun _ ->
+              let result = loadProgramEnvironment "prod"
+
+              Expect.equal result PROD "did not return PROD when provided 'prod'"
+
+          testCase "returns PROD for 'PRODUCTION'"
+          <| fun _ ->
+              let result = loadProgramEnvironment "PRODUCTION"
+
+              Expect.equal result PROD "did not return PROD when provided 'PRODUCTION'"
+
+          testCase "returns PROD for 'PROD'"
+          <| fun _ ->
+              let result = loadProgramEnvironment "PROD"
+
+              Expect.equal result PROD "did not return PROD when provided 'PROD'"
+
+          testCase "fails for invalid string"
+          <| fun _ ->
+              Expect.throws
+                  (fun _ -> loadProgramEnvironment "prodvelopment" |> ignore)
+                  "did not throw an exception when provided an invalid value"
 
 
           ]
