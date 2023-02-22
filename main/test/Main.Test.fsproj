@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Common.Functions.Test.fs" />
     <Compile Include="Environment.Functions.Test.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
