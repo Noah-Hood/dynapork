@@ -67,7 +67,7 @@ module Environment =
                     | Some rt -> rt
                     | None ->
                         failwith
-                            "RECORDTYPE environment variable set to invalid value. Must be onf of A, MX, CNAME, ALIAS, TXT, Ns, AAAA, ETV, TLSA, or CAA."
+                            "RECORDTYPE environment variable set to invalid value. Must be one of A, MX, CNAME, ALIAS, TXT, Ns, AAAA, ETV, TLSA, or CAA."
                 | None -> failwith "RECORDTYPE environment variable must be set."
 
             let subdomain =
