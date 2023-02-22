@@ -4,11 +4,13 @@ open Expecto
 open Functions.Environment
 open Domain.Environment
 
-// scenario tests
+let config =
+    { FsCheckConfig.defaultConfig with maxTest = 10000 }
+
 [<Tests>]
 let loadProgramEnvironmentTests =
     testList
-        "loadProgramEnvironment test scenarios"
+        "loadProgramEnvironment tests"
         [ testCase "returns DEV for 'development'"
           <| fun _ ->
               let result = loadProgramEnvironment "development"
@@ -75,5 +77,34 @@ let loadProgramEnvironmentTests =
                   (fun _ -> loadProgramEnvironment "prodvelopment" |> ignore)
                   "did not throw an exception when provided an invalid value"
 
+          testPropertyWithConfig config "returns only one of three possible results, irrespective of input"
+          <| fun s ->
+              try
+                  let result = loadProgramEnvironment s
+
+                  Expect.contains
+                      [| DEV; PROD |]
+                      result
+                      "success did not return one of two acceptable success conditions"
+              with
+              | ex ->
+                  Expect.equal
+                      ex.Message
+                      "Environment environment variable must be set to one of 'dev' or 'prod.'"
+                      "did not return expected error for invalid input"
+
+          testPropertyWithConfig config "returns the same result twice for the same input"
+          <| fun s ->
+              try
+                  let r1 = loadProgramEnvironment s
+                  let r2 = loadProgramEnvironment s
+
+                  Expect.equal r1 r2 "did not return the same result twice for the same input"
+              with
+              | ex ->
+                  Expect.equal
+                      ex.Message
+                      "Environment environment variable must be set to one of 'dev' or 'prod.'"
+                      "did not return expected error for invalid input"
 
           ]
