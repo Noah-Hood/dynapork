@@ -18,6 +18,23 @@ let options =
     HttpClientInterceptorOptions()
         .ThrowsOnMissingRegistration()
 
+let setBuilderContent
+    (options: HttpClientInterceptorOptions)
+    (bldr: HttpRequestInterceptionBuilder)
+    (ctnt: PBPingResponse)
+    =
+    let strContent =
+        match ctnt with
+        | Success s -> s |> PBPingSuccessResponse.encoder
+        | Failure f -> f |> Domain.PorkBunError.PBErrorResponse.encoder
+        |> (fun x -> x.ToString())
+
+    bldr
+        .Responds()
+        .WithContent(strContent)
+        .RegisterWith(options)
+
+
 let builder =
     HttpRequestInterceptionBuilder()
         .Requests()
@@ -25,14 +42,6 @@ let builder =
         .ForPost()
         .ForHost("api-ipv4.porkbun.com")
         .ForPath("api/json/v3/ping")
-        .Responds()
-        .WithContent(
-            { PBPingSuccessResponse.Status = "Success"
-              PBPingSuccessResponse.YourIP = "192.168.1.1" }
-            |> PBPingSuccessResponse.encoder
-            |> (fun x -> x.ToString())
-        )
-        .RegisterWith(options)
 
 [<Tests>]
 let fetchIPTests =
@@ -42,6 +51,14 @@ let fetchIPTests =
         [ testCase "Runs the test with the interceptor, returning the IP Address"
           <| fun _ ->
               let expected = "192.168.1.1" |> IPAddress |> Ok
+
+              let response =
+                  { Status = "Success"
+                    YourIP = "192.168.1.1" }
+                  |> Success
+
+              setBuilderContent options builder response
+              |> ignore
 
               use client = options.CreateHttpClient()
 
