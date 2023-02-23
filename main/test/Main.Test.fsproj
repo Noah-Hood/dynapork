@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Common.Functions.Test.fs" />
     <Compile Include="Environment.Functions.Test.fs" />
+    <Compile Include="Ping.Functions.Test.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 
@@ -16,6 +17,7 @@
     <PackageReference Include="Expecto" Version="9.*" />
     <PackageReference Include="Expecto.FsCheck" Version="9.0.4" />
     <PackageReference Include="FsCheck" Version="2.16.5" />
+    <PackageReference Include="JustEat.HttpClientInterception" Version="4.0.0" />
     <PackageReference Include="YoloDev.Expecto.TestSdk" Version="0.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Update="FSharp.Core" Version="7.*" />
