@@ -2,7 +2,6 @@ module PingFunctionsTests
 
 // testing libraries
 open Expecto
-open FsCheck
 open JustEat.HttpClientInterception // mocking library for HttpClient
 
 // system libraries
@@ -13,6 +12,9 @@ open Domain.Environment
 // module under test
 open Domain.Ping
 open Functions.Ping
+
+// Bogus generator
+let ipGenerator = Bogus.DataSets.Internet()
 
 let options =
     HttpClientInterceptorOptions()
@@ -34,8 +36,20 @@ let setBuilderContent
         .WithContent(strContent)
         .RegisterWith(options)
 
+let setBuilderExpectedContent (bldr: HttpRequestInterceptionBuilder) (ctnt: PBPingCommand) =
+    let strContent =
+        ctnt
+        |> PBPingCommand.encoder
+        |> (fun x -> x.ToString())
 
-let builder =
+    bldr.ForContent(
+        (fun x ->
+            (x.ReadAsStringAsync()
+             |> Async.AwaitTask
+             |> Async.RunSynchronously) = strContent)
+    )
+
+let builderBase =
     HttpRequestInterceptionBuilder()
         .Requests()
         .ForHttps()
@@ -43,33 +57,51 @@ let builder =
         .ForHost("api-ipv4.porkbun.com")
         .ForPath("api/json/v3/ping")
 
+/// There are three possibilities:
+///     1. Successful response (correct api keys, etc.) -> Ok ipAddress
+///     2. Unsuccessful response (incorrect api keys) -> Error
+///     3. Network failure -> Error
+
+[<Literal>]
+let ValidAPIKey = "pk1_valid_key"
+
+[<Literal>]
+let ValidSecretKey = "sk1_valid_key"
+
 [<Tests>]
 let fetchIPTests =
     testList
         "fetchIP tests"
 
-        [ testCase "Runs the test with the interceptor, returning the IP Address"
+        [
+
+          testCase "When the API returns a successful response, returns the address correctly"
           <| fun _ ->
-              let expected = "192.168.1.1" |> IPAddress |> Ok
+              // setup the command to use, and to be accepted by the builder
+              let command =
+                  { APIKey = APIKey ValidAPIKey
+                    SecretKey = SecretKey ValidSecretKey }
 
+              // generate a random IP Address with Bogus
+              let testIP = ipGenerator.Ip()
+
+              // set up the expected response
               let response =
-                  { Status = "Success"
-                    YourIP = "192.168.1.1" }
-                  |> Success
+                  { Status = "Success"; YourIP = testIP } |> Success
 
-              setBuilderContent options builder response
+              // prime the builder to only accept the
+              let bodyParseBuilder =
+                  setBuilderExpectedContent builderBase command
+
+              setBuilderContent options bodyParseBuilder response
               |> ignore
 
               use client = options.CreateHttpClient()
 
-              let cmd =
-                  { PBPingCommand.APIKey = APIKey "pk1_...."
-                    PBPingCommand.SecretKey = SecretKey "sk1_...." }
-
               async {
-                  let! result = fetchIP client cmd
+                  let! result = fetchIP client command
 
-                  Expect.equal result expected "did not return a success with the correct IP address"
+                  Expect.equal result (IPAddress testIP |> Ok) "did not return a success with the correct IP address"
               }
               |> Async.RunSynchronously
 
