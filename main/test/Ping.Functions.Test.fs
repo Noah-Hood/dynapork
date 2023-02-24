@@ -49,14 +49,14 @@ let setBuilderExpectedContent (bldr: HttpRequestInterceptionBuilder) (ctnt: PBPi
              |> Async.RunSynchronously) = strContent)
     )
 
-let createDefaultBuilder () = 
+let createDefaultBuilder () =
     HttpRequestInterceptionBuilder()
         .Requests()
         .ForHttps()
         .ForPost()
         .ForHost("api-ipv4.porkbun.com")
         .ForPath("api/json/v3/ping")
- 
+
 /// There are three possibilities:
 ///     1. Successful response (correct api keys, etc.) -> Ok ipAddress
 ///     2. Unsuccessful response (incorrect api keys) -> Error
@@ -68,19 +68,11 @@ let ValidAPIKey = "pk1_valid_key"
 [<Literal>]
 let ValidSecretKey = "sk1_valid_key"
 
-[<Tests>]
-let fetchIPTests =
-    testList
-        "fetchIP tests"
+let builderTests setup =
+    [
 
-        [
-
-          testCase "When the API returns a successful response, returns the address correctly"
-          <| fun _ ->
-              let builderBase = createDefaultBuilder()
-              let options = HttpClientInterceptorOptions().ThrowsOnMissingRegistration()
-
-
+      test "when the API returns a successful response, returns the address correctly" {
+          setup (fun builderBase options ->
               // setup the command to use, and to be accepted by the builder
               let command =
                   { APIKey = APIKey ValidAPIKey
@@ -107,10 +99,12 @@ let fetchIPTests =
               }
               |> Async.RunSynchronously
 
-          testCase "When the API returns an API Key failure response, returns the correct error"
-          <| fun _ ->
-              let builderBase = (createDefaultBuilder()).WithStatus(System.Net.HttpStatusCode.BadRequest)
-              let options = HttpClientInterceptorOptions().ThrowsOnMissingRegistration()
+          )
+      }
+
+      test "when the API returns a failure for an invalid API Key, returns the correct error" {
+          setup (fun builderBase options ->
+              let builderBase = builderBase.WithStatus(System.Net.HttpStatusCode.BadRequest)
               let expected: PBPingResult = InvalidAPIKey |> Error
 
               let command =
@@ -119,7 +113,8 @@ let fetchIPTests =
 
               let response =
                   { Status = "Failure"
-                    Message = "invalid api key. (002)" } |> Failure
+                    Message = "invalid api key. (002)" }
+                  |> Failure
 
               setBuilderContent options builderBase response
               |> ignore
@@ -131,7 +126,19 @@ let fetchIPTests =
 
                   Expect.equal result expected "did not return an InvalidAPIKey error"
               }
-              |> Async.RunSynchronously
+              |> Async.RunSynchronously)
+      }
 
+      ]
 
-          ]
+[<Tests>]
+let fetchIPTests =
+    builderTests (fun test ->
+        let builderBase = createDefaultBuilder ()
+
+        let options =
+            HttpClientInterceptorOptions()
+                .ThrowsOnMissingRegistration()
+
+        test builderBase options)
+    |> testList "fetchIPTests with Setup/Teardown"
