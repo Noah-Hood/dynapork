@@ -4,22 +4,20 @@ module PingFunctionsTests
 open Expecto
 open JustEat.HttpClientInterception // mocking library for HttpClient
 
-// system libraries
-open System.Net.Http
+let ipGenerator = Bogus.DataSets.Internet() // Bogus generator
 
+// types necessary for test setup
 open Domain.Environment
+open Domain.PorkBunError
 
 // module under test
 open Domain.Ping
 open Functions.Ping
 
-// Bogus generator
-let ipGenerator = Bogus.DataSets.Internet()
-
-let options =
-    HttpClientInterceptorOptions()
-        .ThrowsOnMissingRegistration()
-
+/// <summary>Sets the return value of an
+/// <code>HttpClientInterceptionBuilder</code>
+/// registers it with the provided options,
+/// and return it.</summary>
 let setBuilderContent
     (options: HttpClientInterceptorOptions)
     (bldr: HttpRequestInterceptionBuilder)
@@ -28,7 +26,7 @@ let setBuilderContent
     let strContent =
         match ctnt with
         | Success s -> s |> PBPingSuccessResponse.encoder
-        | Failure f -> f |> Domain.PorkBunError.PBErrorResponse.encoder
+        | Failure f -> f |> PBErrorResponse.encoder
         |> (fun x -> x.ToString())
 
     bldr
@@ -36,6 +34,8 @@ let setBuilderContent
         .WithContent(strContent)
         .RegisterWith(options)
 
+/// <summary>Sets the content for which the
+/// <code>HttpRequestInterceptionBilder</code> will respond.</summary>
 let setBuilderExpectedContent (bldr: HttpRequestInterceptionBuilder) (ctnt: PBPingCommand) =
     let strContent =
         ctnt
@@ -49,14 +49,14 @@ let setBuilderExpectedContent (bldr: HttpRequestInterceptionBuilder) (ctnt: PBPi
              |> Async.RunSynchronously) = strContent)
     )
 
-let builderBase =
+let createDefaultBuilder () = 
     HttpRequestInterceptionBuilder()
         .Requests()
         .ForHttps()
         .ForPost()
         .ForHost("api-ipv4.porkbun.com")
         .ForPath("api/json/v3/ping")
-
+ 
 /// There are three possibilities:
 ///     1. Successful response (correct api keys, etc.) -> Ok ipAddress
 ///     2. Unsuccessful response (incorrect api keys) -> Error
@@ -77,6 +77,10 @@ let fetchIPTests =
 
           testCase "When the API returns a successful response, returns the address correctly"
           <| fun _ ->
+              let builderBase = createDefaultBuilder()
+              let options = HttpClientInterceptorOptions().ThrowsOnMissingRegistration()
+
+
               // setup the command to use, and to be accepted by the builder
               let command =
                   { APIKey = APIKey ValidAPIKey
@@ -86,12 +90,10 @@ let fetchIPTests =
               let testIP = ipGenerator.Ip()
 
               // set up the expected response
-              let response =
-                  { Status = "Success"; YourIP = testIP } |> Success
+              let response = { Status = "Success"; YourIP = testIP } |> Success
 
               // prime the builder to only accept the
-              let bodyParseBuilder =
-                  setBuilderExpectedContent builderBase command
+              let bodyParseBuilder = setBuilderExpectedContent builderBase command
 
               setBuilderContent options bodyParseBuilder response
               |> ignore
@@ -105,4 +107,31 @@ let fetchIPTests =
               }
               |> Async.RunSynchronously
 
-         ]
+          testCase "When the API returns an API Key failure response, returns the correct error"
+          <| fun _ ->
+              let builderBase = (createDefaultBuilder()).WithStatus(System.Net.HttpStatusCode.BadRequest)
+              let options = HttpClientInterceptorOptions().ThrowsOnMissingRegistration()
+              let expected: PBPingResult = InvalidAPIKey |> Error
+
+              let command =
+                  { APIKey = APIKey "invalidkey"
+                    SecretKey = SecretKey "invalidsecretkey" }
+
+              let response =
+                  { Status = "Failure"
+                    Message = "invalid api key. (002)" } |> Failure
+
+              setBuilderContent options builderBase response
+              |> ignore
+
+              use client = options.CreateHttpClient()
+
+              async {
+                  let! result = fetchIP client command
+
+                  Expect.equal result expected "did not return an InvalidAPIKey error"
+              }
+              |> Async.RunSynchronously
+
+
+          ]
