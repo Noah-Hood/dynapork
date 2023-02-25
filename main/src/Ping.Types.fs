@@ -10,7 +10,10 @@ module Ping =
     type PBPingCommand = Credentials
 
     type PBPingSuccessResponse = { Status: string; YourIP: string }
-    type PBPingFailureResponse = { Status: string; Message: string }
+
+    type PBPingResponse =
+        | Success of PBPingSuccessResponse
+        | Failure of PBErrorResponse
 
     type IPAddress = IPAddress of string
 
