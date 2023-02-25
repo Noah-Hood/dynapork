@@ -129,7 +129,31 @@ let builderTests setup =
               |> Async.RunSynchronously)
       }
 
-      ]
+      test "when the API returns any other error, returns a generic error with the message" {
+          setup (fun builderBase options ->
+              let builderBase = builderBase.WithStatus(System.Net.HttpStatusCode.BadRequest)
+              let expected: PBPingResult = APIError "unspecific api error" |> Error
+
+              let command =
+                  { APIKey = APIKey ValidAPIKey
+                    SecretKey = SecretKey ValidSecretKey }
+
+              let response =
+                  { Status = "Failure"
+                    Message = "unspecific api error" }
+                  |> Failure
+
+              setBuilderContent options builderBase response
+              |> ignore
+
+              use client = options.CreateHttpClient()
+
+              async {
+                  let! result = fetchIP client command
+                  Expect.equal result expected "did not return the message from the error"
+              }
+              |> Async.RunSynchronously)
+      } ]
 
 [<Tests>]
 let fetchIPTests =
