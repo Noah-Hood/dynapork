@@ -9,53 +9,25 @@ let ipGenerator = Bogus.DataSets.Internet() // Bogus generator
 // types necessary for test setup
 open Domain.Environment
 open Domain.PorkBunError
+open HttpClientInterceptionUtil
 
 // module under test
 open Domain.Ping
 open Functions.Ping
 
-/// <summary>Sets the return value of an
-/// <code>HttpClientInterceptionBuilder</code>
-/// registers it with the provided options,
-/// and return it.</summary>
-let setBuilderContent
-    (options: HttpClientInterceptorOptions)
-    (bldr: HttpRequestInterceptionBuilder)
-    (ctnt: PBPingResponse)
-    =
-    let strContent =
-        match ctnt with
-        | Success s -> s |> PBPingSuccessResponse.encoder
-        | Failure f -> f |> PBErrorResponse.encoder
-        |> (fun x -> x.ToString())
+// helper function for turning a PBPingResponse to a string
+let contentToString (ctnt: PBPingResponse) =
+    match ctnt with
+    | Success s -> s |> PBPingSuccessResponse.encoder
+    | Failure f -> f |> PBErrorResponse.encoder
+    |> (fun x -> x.ToString())
 
-    bldr
-        .Responds()
-        .WithContent(strContent)
-        .RegisterWith(options)
+// partial application for utility functions
+let setBuilderContent = setBuilderContent contentToString
+let setBuilderExpectedContent = setBuilderExpectedContent PBPingCommand.encoder
 
-/// <summary>Sets the content for which the
-/// <code>HttpRequestInterceptionBilder</code> will respond.</summary>
-let setBuilderExpectedContent (bldr: HttpRequestInterceptionBuilder) (ctnt: PBPingCommand) =
-    let strContent =
-        ctnt
-        |> PBPingCommand.encoder
-        |> (fun x -> x.ToString())
-
-    bldr.ForContent(
-        (fun x ->
-            (x.ReadAsStringAsync()
-             |> Async.AwaitTask
-             |> Async.RunSynchronously) = strContent)
-    )
-
-let createDefaultBuilder () =
-    HttpRequestInterceptionBuilder()
-        .Requests()
-        .ForHttps()
-        .ForPost()
-        .ForHost("api-ipv4.porkbun.com")
-        .ForPath("api/json/v3/ping")
+let createDefaultBuilder =
+    fun () -> createDefaultBuilder "api-ipv4.porkbun.com" "api/json/v3/ping"
 
 /// There are three possibilities:
 ///     1. Successful response (correct api keys, etc.) -> Ok ipAddress
