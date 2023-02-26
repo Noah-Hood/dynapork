@@ -89,4 +89,42 @@ let editDNSRecordTests =
                       (Ok { Status = "successfully changed IP Address" })
                       "did not return the status message properly"
               }
-              |> Async.RunSynchronously ]
+              |> Async.RunSynchronously
+
+          testCase "returns a ResultParseError for an unexpected result"
+          <| fun _ ->
+              let response = """{"staytus": "success"}"""
+
+              let urlParams = DefaultCommand.URLParams
+
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+
+              let builder =
+                  (createDefaultBuilder "porkbun.com" path)
+                      .WithContent(response)
+
+              let options =
+                  HttpClientInterceptorOptions()
+                      .ThrowsOnMissingRegistration()
+
+              let client = options.CreateHttpClient()
+
+              builder.RegisterWith(options) |> ignore
+
+              async {
+                  let! result = editRecord client DefaultCommand
+
+                  let isCorrectError =
+                      match result with
+                      | Error (ResultParseError _) -> true
+                      | _ -> false
+
+                  Expect.isTrue isCorrectError "did not return a ResultParseError"
+
+              }
+              |> Async.RunSynchronously
+
+
+
+
+          ]
