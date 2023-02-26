@@ -10,6 +10,7 @@ let ipGenerator = Bogus.DataSets.Internet() // Bogus generator
 // types necessary for test setup
 open Domain.Environment
 open Domain.Ping
+open Domain.PorkBunError
 
 // module under test
 open Domain.EditDNSRecord
@@ -125,6 +126,146 @@ let editDNSRecordTests =
               |> Async.RunSynchronously
 
 
+          testCase "returns an invalidDomain error when given an invalid domain response"
+          <| fun _ ->
+              let response: PBErrorResponse =
+                  { Status = "Error"
+                    Message = "invalid domain." }
 
+              let urlParams = DefaultCommand.URLParams
+
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+
+              let builder =
+                  (createDefaultBuilder "porkbun.com" path)
+                      .WithStatus(System.Net.HttpStatusCode.BadRequest)
+                      .WithContent((PBErrorResponse.encoder response).ToString())
+
+              let options =
+                  HttpClientInterceptorOptions()
+                      .ThrowsOnMissingRegistration()
+
+              let client = options.CreateHttpClient()
+
+              builder.RegisterWith(options) |> ignore
+
+              async {
+                  let! result = editRecord client DefaultCommand
+
+                  let isCorrectError =
+                      match result with
+                      | Error (InvalidDomain) -> true
+                      | _ -> false
+
+                  Expect.isTrue isCorrectError "did not return an InvalidDomain error"
+
+              }
+              |> Async.RunSynchronously
+
+          testCase "returns an invalidRecordID error when given an invalid record id response"
+          <| fun _ ->
+              let response: PBErrorResponse =
+                  { Status = "Error"
+                    Message = "invalid record id." }
+
+              let urlParams = DefaultCommand.URLParams
+
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+
+              let builder =
+                  (createDefaultBuilder "porkbun.com" path)
+                      .WithStatus(System.Net.HttpStatusCode.BadRequest)
+                      .WithContent((PBErrorResponse.encoder response).ToString())
+
+              let options =
+                  HttpClientInterceptorOptions()
+                      .ThrowsOnMissingRegistration()
+
+              let client = options.CreateHttpClient()
+
+              builder.RegisterWith(options) |> ignore
+
+              async {
+                  let! result = editRecord client DefaultCommand
+
+                  let isCorrectError =
+                      match result with
+                      | Error InvalidRecordID -> true
+                      | _ -> false
+
+                  Expect.isTrue isCorrectError "did not return an InvalidRecordID error"
+
+              }
+              |> Async.RunSynchronously
+
+          testCase "returns a sameContent error when given a response indicating inability to edit record"
+          <| fun _ ->
+              let response: PBErrorResponse =
+                  { Status = "Error"
+                    Message = "edit error: we were unable to edit the dns record." }
+
+              let urlParams = DefaultCommand.URLParams
+
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+
+              let builder =
+                  (createDefaultBuilder "porkbun.com" path)
+                      .WithStatus(System.Net.HttpStatusCode.BadRequest)
+                      .WithContent((PBErrorResponse.encoder response).ToString())
+
+              let options =
+                  HttpClientInterceptorOptions()
+                      .ThrowsOnMissingRegistration()
+
+              let client = options.CreateHttpClient()
+
+              builder.RegisterWith(options) |> ignore
+
+              async {
+                  let! result = editRecord client DefaultCommand
+
+                  let isCorrectError =
+                      match result with
+                      | Error SameContentError -> true
+                      | _ -> false
+
+                  Expect.isTrue isCorrectError "did not return a SameContentError"
+
+              }
+              |> Async.RunSynchronously
+
+          testCase "returns an APIError when given a response other than one quantified"
+          <| fun _ ->
+              let response: PBErrorResponse =
+                  { Status = "Error"
+                    Message = "Unspecified error message" }
+
+              let urlParams = DefaultCommand.URLParams
+
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+
+              let builder =
+                  (createDefaultBuilder "porkbun.com" path)
+                      .WithStatus(System.Net.HttpStatusCode.BadRequest)
+                      .WithContent((PBErrorResponse.encoder response).ToString())
+
+              let options =
+                  HttpClientInterceptorOptions()
+                      .ThrowsOnMissingRegistration()
+
+              let client = options.CreateHttpClient()
+
+              builder.RegisterWith(options) |> ignore
+
+              async {
+                  let! result = editRecord client DefaultCommand
+
+                  Expect.equal
+                      result
+                      (Error(APIError "unspecified error message"))
+                      "did not return the error message for an unspecified API error"
+
+              }
+              |> Async.RunSynchronously
 
           ]
