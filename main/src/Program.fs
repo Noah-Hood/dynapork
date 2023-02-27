@@ -37,7 +37,7 @@ let main _ =
         |> loadProgramEnvironment
 
     let { Credentials = credentials
-          DomainInfo = domainInfo} =
+          DomainInfo = domainInfo } =
         loadEnvironment environment
 
     use client = new HttpClient()
@@ -46,7 +46,7 @@ let main _ =
     let ipSvc = createIPService client credentials
 
     let (task, observable) =
-        createIPWatcher logger ipSvc (5 * 60 * 1000)
+        createIPWatcher logger ipSvc (15 * 60 * 1000) // check ip every 15 mins
 
     observable
     |> Observable.subscribe (fun (IPAddress x) ->
