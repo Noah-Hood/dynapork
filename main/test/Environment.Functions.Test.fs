@@ -90,7 +90,7 @@ let loadProgramEnvironmentTests =
               | ex ->
                   Expect.equal
                       ex.Message
-                      "Environment environment variable must be set to one of 'dev' or 'prod.'"
+                      "Environment variable 'ENVIRONMENT' must be set to one of 'dev' or 'prod.'"
                       "did not return expected error for invalid input"
 
           testPropertyWithConfig config "returns the same result twice for the same input"
@@ -104,7 +104,7 @@ let loadProgramEnvironmentTests =
               | ex ->
                   Expect.equal
                       ex.Message
-                      "Environment environment variable must be set to one of 'dev' or 'prod.'"
+                      "Environment variable 'ENVIRONMENT' must be set to one of 'dev' or 'prod.'"
                       "did not return expected error for invalid input"
 
           ]

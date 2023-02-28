@@ -6,6 +6,7 @@ open Thoth.Json.Net
 
 open Domain.EditDNSRecord
 open Domain.Environment
+open Domain.Config
 
 module EditDNSRecord =
     [<Literal>]

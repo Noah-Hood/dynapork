@@ -5,6 +5,7 @@ open Thoth.Json.Net
 
 open Domain.Environment
 open Domain.Ping
+open Domain.Config
 
 module EditDNSRecord =
     type BodyParams =

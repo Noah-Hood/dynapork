@@ -7,6 +7,9 @@ open Domain.Environment
 
 module Environment =
     let loadProgramEnvironment: LoadProgramEnvironment =
+        let failMsg =
+            "Environment variable 'ENVIRONMENT' must be set to one of 'dev' or 'prod.'"
+
         fun s ->
             try
                 match s.ToLowerInvariant() with
@@ -15,16 +18,15 @@ module Environment =
                 | "develop" -> DEV
                 | "production"
                 | "prod" -> PROD
-                | _ -> failwith "Environment environment variable must be set to one of 'dev' or 'prod.'"
+                | _ -> failwith failMsg
             with
-            | :? NullReferenceException ->
-                failwith "Environment environment variable must be set to one of 'dev' or 'prod.'"
+            | :? NullReferenceException -> failwith failMsg
 
     let private addEnvVars env (cfgBldr: IConfigurationBuilder) = cfgBldr.AddEnvironmentVariables()
 
     let private addRuntimeSecrets env (cfgBldr: IConfigurationBuilder) =
         match env with
-        | DEV -> cfgBldr.AddUserSecrets<EnvironmentVariables>()
+        | DEV -> cfgBldr.AddUserSecrets<Credentials>()
         | PROD -> cfgBldr.AddKeyPerFile("/var/secrets", true)
 
     let private tryGetItemFromConfig (config: IConfigurationRoot) (itemName: string) =
@@ -55,34 +57,5 @@ module Environment =
                 | Some s -> s |> SecretKey
                 | None -> failwith "SECRETKEY environment variable must be set."
 
-            let domainName =
-                match tryGetPartial "DOMAINNAME" with
-                | Some d -> d |> DomainName
-                | None -> failwith "DOMAINNAME environment variable must be set."
-
-            let recordType =
-                match tryGetPartial "RECORDTYPE" with
-                | Some r ->
-                    match r |> RecordType.stringToRecordType with
-                    | Some rt -> rt
-                    | None ->
-                        failwith
-                            "RECORDTYPE environment variable set to invalid value. Must be one of A, MX, CNAME, ALIAS, TXT, Ns, AAAA, ETV, TLSA, or CAA."
-                | None -> failwith "RECORDTYPE environment variable must be set."
-
-            let subdomain =
-                match tryGetPartial "SUBDOMAIN" with
-                | Some s -> s |> Subdomain |> Some
-                | None -> None
-
-            let credentials =
-                { APIKey = apiKey
-                  SecretKey = secretKey }
-
-            let domainInfo =
-                { Domain = domainName
-                  Subdomain = subdomain
-                  RecordType = recordType }
-
-            { Credentials = credentials
-              DomainInfo = domainInfo }
+            { APIKey = apiKey
+              SecretKey = secretKey }
