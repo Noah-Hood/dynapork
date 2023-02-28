@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./userdata.schema.json
+interval: 50000
+records:
+  - domainName: "website.ext"
+    subdomain: "service1"
+    recordType: "A"
+  - domainName: "website.ext"
+    subdomain: "service2"
+    recordType: "A"

@@ -22,3 +22,7 @@ TestResults/
 
 # Sensitive application config
 appsettings*.json
+secrets/
+
+# Testing files
+docker-compose.yml
