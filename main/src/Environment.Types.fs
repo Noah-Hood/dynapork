@@ -3,11 +3,19 @@ namespace Domain
 open Thoth.Json.Net
 
 module Environment =
+    [<Measure>]
+    type ms
+
     type APIKey = APIKey of string
     type SecretKey = SecretKey of string
-    type ProgramEnvironment = DEV | PROD
+
+    type ProgramEnvironment =
+        | DEV
+        | PROD
+
     type DomainName = DomainName of string
     type Subdomain = Subdomain of string
+
     type RecordType =
         | A
         | MX
@@ -20,22 +28,23 @@ module Environment =
         | TLSA
         | CAA
 
+    type Interval = int<ms>
+
     type Credentials =
         { APIKey: APIKey
           SecretKey: SecretKey }
 
-    type DomainInfo = {
-        Domain: DomainName
-        Subdomain: Subdomain option
-        RecordType: RecordType
-    }
+    type DomainInfo =
+        { Domain: DomainName
+          Subdomain: Subdomain option
+          RecordType: RecordType }
 
     type EnvironmentVariables =
         { Credentials: Credentials
           DomainInfo: DomainInfo
-          }
+          Interval: Interval }
 
-    type LoadProgramEnvironment = string -> ProgramEnvironment 
+    type LoadProgramEnvironment = string -> ProgramEnvironment
 
     type LoadEnvironment = ProgramEnvironment -> EnvironmentVariables
 

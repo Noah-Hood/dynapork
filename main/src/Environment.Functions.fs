@@ -6,6 +6,13 @@ open System
 open Domain.Environment
 
 module Environment =
+    [<Literal>]
+    let private DEFAULT_INTERVAL = 900000
+
+    [<Literal>]
+    let private MINIMUM_INTERVAL = 5000
+
+
     let loadProgramEnvironment: LoadProgramEnvironment =
         fun s ->
             try
@@ -25,7 +32,7 @@ module Environment =
     let private addRuntimeSecrets env (cfgBldr: IConfigurationBuilder) =
         match env with
         | DEV -> cfgBldr.AddUserSecrets<EnvironmentVariables>()
-        | PROD -> cfgBldr.AddKeyPerFile("/var/secrets", true)
+        | PROD -> cfgBldr.AddKeyPerFile(directoryPath = "/run/secrets", optional = false)
 
     let private tryGetItemFromConfig (config: IConfigurationRoot) (itemName: string) =
         let rawKey = config.Item(itemName)
@@ -45,21 +52,31 @@ module Environment =
 
             let tryGetPartial = tryGetItemFromConfig config
 
+            // public key for PorkBun API
             let apiKey =
                 match tryGetPartial "APIKEY" with
                 | Some a -> a |> APIKey
                 | None -> failwith "APIKEY environment variable must be set."
 
+            // private key for PorkBun API
             let secretKey =
                 match tryGetPartial "SECRETKEY" with
                 | Some s -> s |> SecretKey
                 | None -> failwith "SECRETKEY environment variable must be set."
 
+            // the domainName for which to maintain the record
             let domainName =
                 match tryGetPartial "DOMAINNAME" with
                 | Some d -> d |> DomainName
                 | None -> failwith "DOMAINNAME environment variable must be set."
 
+            // the optional subdomain for which to maintain the record
+            let subdomain =
+                match tryGetPartial "SUBDOMAIN" with
+                | Some s -> s |> Subdomain |> Some
+                | None -> None
+
+            // the type of record to maintain for the domain/subdomain combo
             let recordType =
                 match tryGetPartial "RECORDTYPE" with
                 | Some r ->
@@ -70,10 +87,19 @@ module Environment =
                             "RECORDTYPE environment variable set to invalid value. Must be one of A, MX, CNAME, ALIAS, TXT, Ns, AAAA, ETV, TLSA, or CAA."
                 | None -> failwith "RECORDTYPE environment variable must be set."
 
-            let subdomain =
-                match tryGetPartial "SUBDOMAIN" with
-                | Some s -> s |> Subdomain |> Some
-                | None -> None
+            // the time (in milliseconds) between checks for a change in public IP address
+            // limited to a minimum of 5 seconds
+            let interval =
+                match tryGetPartial "INTERVAL" with
+                | Some i ->
+                    let success, intVal = System.Int32.TryParse(i)
+
+                    if success then
+                        max intVal MINIMUM_INTERVAL
+                    else
+                        DEFAULT_INTERVAL
+                | None -> DEFAULT_INTERVAL
+                |> fun intVal -> intVal * 1<ms>
 
             let credentials =
                 { APIKey = apiKey
@@ -85,4 +111,5 @@ module Environment =
                   RecordType = recordType }
 
             { Credentials = credentials
-              DomainInfo = domainInfo }
+              DomainInfo = domainInfo
+              Interval = interval }
