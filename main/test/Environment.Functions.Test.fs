@@ -105,6 +105,4 @@ let loadProgramEnvironmentTests =
                   Expect.equal
                       ex.Message
                       "Environment environment variable must be set to one of 'dev' or 'prod.'"
-                      "did not return expected error for invalid input"
-
-          ]
+                      "did not return expected error for invalid input" ]

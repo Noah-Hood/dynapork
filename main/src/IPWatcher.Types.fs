@@ -14,4 +14,7 @@ module IPWatcher =
 
 
     type CreateIPWatcher =
-        NLog.Logger -> (unit -> Async<PBPingResult>) -> int -> Async<unit> * IEvent<Handler<IPAddress>, IPAddress>
+        NLog.Logger
+            -> (unit -> Async<PBPingResult>)
+            -> Domain.Environment.Interval
+            -> Async<unit> * IEvent<Handler<IPAddress>, IPAddress>

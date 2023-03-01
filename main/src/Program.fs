@@ -37,7 +37,8 @@ let main _ =
         |> loadProgramEnvironment
 
     let { Credentials = credentials
-          DomainInfo = domainInfo} =
+          DomainInfo = domainInfo
+          Interval = interval } =
         loadEnvironment environment
 
     use client = new HttpClient()
@@ -45,8 +46,7 @@ let main _ =
 
     let ipSvc = createIPService client credentials
 
-    let (task, observable) =
-        createIPWatcher logger ipSvc (5 * 60 * 1000)
+    let (task, observable) = createIPWatcher logger ipSvc interval
 
     observable
     |> Observable.subscribe (fun (IPAddress x) ->
@@ -59,7 +59,7 @@ let main _ =
 
         let bodyParams: BodyParams =
             { Content = IPAddress x
-              TTL = Some 600
+              TTL = None
               Prio = None }
 
         let editCmd =
