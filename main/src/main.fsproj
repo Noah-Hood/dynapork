@@ -12,8 +12,6 @@
     <Compile Include="PorkBunError.Types.fs" />
     <Compile Include="Environment.Types.fs" />
     <Compile Include="Environment.Functions.fs" />
-    <Compile Include="Config.Types.fs" />
-    <Compile Include="Config.Functions.fs" />
     <Compile Include="Ping.Types.fs" />
     <Compile Include="Ping.Functions.fs" />
     <Compile Include="EditDNSRecord.Types.fs" />

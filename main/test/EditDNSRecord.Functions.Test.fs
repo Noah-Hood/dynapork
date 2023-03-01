@@ -8,7 +8,6 @@ open HttpClientInterceptionUtil
 let ipGenerator = Bogus.DataSets.Internet() // Bogus generator
 
 // types necessary for test setup
-open Domain.Config
 open Domain.Environment
 open Domain.Ping
 open Domain.PorkBunError
@@ -65,13 +64,11 @@ let editDNSRecordTests =
 
           testCase "returns the status message correctly"
           <| fun _ ->
-              let response =
-                  { Status = "successfully changed IP Address" }
+              let response = { Status = "successfully changed IP Address" }
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)
@@ -101,8 +98,7 @@ let editDNSRecordTests =
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)
@@ -138,8 +134,7 @@ let editDNSRecordTests =
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)
@@ -175,8 +170,7 @@ let editDNSRecordTests =
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)
@@ -212,8 +206,7 @@ let editDNSRecordTests =
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)
@@ -249,8 +242,7 @@ let editDNSRecordTests =
 
               let urlParams = DefaultCommand.URLParams
 
-              let path =
-                  argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
+              let path = argsToPath urlParams.Domain urlParams.RecordType urlParams.Subdomain
 
               let builder =
                   (createDefaultBuilder "porkbun.com" path)

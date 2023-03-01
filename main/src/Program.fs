@@ -36,7 +36,9 @@ let main _ =
         System.Environment.GetEnvironmentVariable("ENVIRONMENT")
         |> loadProgramEnvironment
 
-    let credentials = loadEnvironment environment
+    let { Credentials = credentials
+          DomainInfo = domainInfo } =
+        loadEnvironment environment
 
     use client = new HttpClient()
     let logger = createLogger ()
@@ -47,35 +49,35 @@ let main _ =
         createIPWatcher logger ipSvc (15 * 60 * 1000) // check ip every 15 mins
 
     observable
-    |> Observable.subscribe (fun (IPAddress x) -> logger.Info($"Updating DNS Record with new IP: {x}..."))
+    |> Observable.subscribe (fun (IPAddress x) ->
+        logger.Info($"Updating DNS Record with new IP: {x}...")
+
+        let urlParams: URLParams =
+            { Domain = domainInfo.Domain
+              RecordType = domainInfo.RecordType
+              Subdomain = domainInfo.Subdomain }
+
+        let bodyParams: BodyParams =
+            { Content = IPAddress x
+              TTL = Some 600
+              Prio = None }
+
+        let editCmd =
+            { Credentials = credentials
+              BodyParams = bodyParams
+              URLParams = urlParams }
+
+        async {
+            let! result = editRecord client editCmd
+
+            match result with
+            | Ok _ -> logger.Info($"Updated A record for {domainInfo.Domain} to {x} successfully.")
+            | Error e -> logger.Error($"Failed to update A record for {domainInfo.Domain} to {x}: {e}")
+
+        }
+        |> Async.RunSynchronously)
     |> ignore
 
-    //     let urlParams: URLParams =
-    //         { Domain = domainInfo.Domain
-    //           RecordType = domainInfo.RecordType
-    //           Subdomain = domainInfo.Subdomain }
-
-    //     let bodyParams: BodyParams =
-    //         { Content = IPAddress x
-    //           TTL = Some 600
-    //           Prio = None }
-
-    //     let editCmd =
-    //         { Credentials = credentials
-    //           BodyParams = bodyParams
-    //           URLParams = urlParams }
-
-    //     async {
-    //         let! result = editRecord client editCmd
-
-    //         match result with
-    //         | Ok _ -> logger.Info($"Updated A record for {domainInfo.Domain} to {x} successfully.")
-    //         | Error e -> logger.Error($"Failed to update A record for {domainInfo.Domain} to {x}: {e}")
-
-    //     }
-    //     |> Async.RunSynchronously)
-    // |> ignore
-
-    // task |> Async.RunSynchronously
+    task |> Async.RunSynchronously
 
     0
