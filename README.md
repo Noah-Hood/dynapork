@@ -40,7 +40,7 @@ secrets:
 
 services:
   dynapork:
-    image: hoodnoah/dynapork:latest
+    image: ghcr.io/hoodnoah/dynapork:latest
     restart: unless-stopped
     secrets:
       - apikey
