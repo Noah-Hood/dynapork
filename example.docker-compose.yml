@@ -1,0 +1,22 @@
+version: '3.9'
+
+secrets:
+  apikey:
+    file: ./secrets/apikey.txt
+  secretkey:
+    file: ./secrets/secretkey.txt
+
+services:
+  dynapork:
+    image: ghcr.io/hoodnoah/dynapork:latest
+    restart: unless-stopped
+    secrets:
+      - apikey
+      - secretkey
+    environment:
+      - DOMAINNAME=domain.ext # The domain to manage
+      - SUBDOMAIN=subdomain # OPTIONAL: a subdomain, e.g. use "vpn" (without quotes) to manage vpn.domain.ext
+      - RECORDTYPE=A # The record type to maintain, e.g. A, MX, CNAME, etc. Most likely will be an A record.
+      - INTERVAL=300000
+        # The time between checks for a changed IP in milliseconds (there is an enforced minimum of 5 seconds,
+        # or 5000 milliseconds to prevent rate-limiting)

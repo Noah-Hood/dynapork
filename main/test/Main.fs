@@ -1,4 +1,4 @@
-﻿module Util.Test
+﻿module Main.Test
 open Expecto
 
 [<EntryPoint>]
