@@ -94,6 +94,10 @@ There are a few common pitfalls when getting this client running correctly.
 First, if a non-optional environment variable has not been set (e.g. `DOMAINNAME`, `RECORDTYPE`) or either/both of the API Keys haven't been set, the client will fail to start
 and will print an error indicating which environment variable has been misconfigured.
 
+While running the Client, there may occationally be an `ERROR` indicating a `SameContentError`. This error message can generally be disregarded; it should only show up when the client is first started. It is caused by the client retrieving the public IP address for the first time, which triggers the same event as when the IP Address changes. This is also due to the way the PorkBun API works; updating a DNS record with the same content returns a non-specific error. Again, this is subject to change as the API is under active development.
+
+There may also be an error which indicates `InvalidDomain`. This is a more serious error; it likely means there is a mismatch between the domain name being used by the client and the domain name on record with PorkBun. Until the two are in agreement, the client will continue to fail.
+
 [1]: https://porkbun.com/
 [2]: https://kb.porkbun.com/article/68-how-to-edit-dns-records
 [3]: https://docs.docker.com/compose/compose-file/compose-file-v3/
