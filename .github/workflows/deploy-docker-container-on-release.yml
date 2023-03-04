@@ -3,7 +3,6 @@ name: Deploy Docker Container on Release
 on:
   release:
     types:
-      - prereleased
       - published
 
 env:
@@ -37,7 +36,7 @@ jobs:
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
+          username: Noah-Hood
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Docker Image 🛠️
@@ -46,4 +45,4 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels}}
+          labels: ${{ steps.meta.outputs.labels }}
