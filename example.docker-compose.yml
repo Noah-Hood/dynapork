@@ -9,7 +9,11 @@ secrets:
 services:
   dynapork:
     image: ghcr.io/hoodnoah/dynapork:latest
-    restart: unless-stopped
+    restart_policy:
+      condition: unless_stopped
+      delay: 20s
+      max_attempts: 3
+      window: 120s
     secrets:
       - apikey
       - secretkey
