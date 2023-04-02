@@ -16,7 +16,8 @@ pub mod request_ip {
     #[derive(Serialize, Deserialize)]
     struct SuccessResponse {
         status: String,
-        yourIp: String,
+        #[serde(rename = "yourIp")]
+        your_ip: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -35,7 +36,7 @@ pub mod request_ip {
         let response = result.json::<PingResponse>()?;
 
         match response {
-            PingResponse::SuccessResponse(response) => Ok(response.yourIp),
+            PingResponse::SuccessResponse(response) => Ok(response.your_ip),
             PingResponse::FailureResponse(response) => {
                 eprintln!("Error: {}", response.message);
                 std::process::exit(1)

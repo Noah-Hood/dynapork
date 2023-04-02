@@ -37,7 +37,7 @@ pub mod config {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Credentials {
-        #[serde(rename = "apikey")]
+        #[serde(rename = "apikey")] // match names in porkbun api
         pub api_key: String,
         #[serde(rename = "secretapikey")]
         pub api_secret: String,
@@ -62,23 +62,19 @@ pub mod config {
         // load dotenv
         dotenv::dotenv().ok();
 
-        // get api key
+        // get keys, map into credentials struct
         let api_key = env::var("APIKEY").map_err(|_| ConfigError::ApiKeyNotFound)?;
-
-        // get api secret
         let api_secret = env::var("SECRETKEY").map_err(|_| ConfigError::ApiSecretNotFound)?;
-
         let credentials = Credentials {
             api_key,
             api_secret,
         };
 
-        // get domain
+        // get domain, subdomain
         let domain = env::var("DOMAINNAME").map_err(|_| ConfigError::DomainNotFound)?;
-
-        // get subdomain
         let subdomain = env::var("SUBDOMAIN").ok();
 
+        // return all as config
         Ok(Config {
             credentials,
             domain,
@@ -89,15 +85,15 @@ pub mod config {
     #[cfg(feature = "docker")]
     pub fn read_config() -> Result<Config, ConfigError> {
         // get api key
-        let api_key = docker_secrets::try_get_secret_by_name("API_KEY")
+        let api_key = docker_secrets::try_get_secret_by_name("APIKEY")
             .map_err(|_| ConfigError::ApiKeyNotFound)?;
 
         // get api secret
-        let api_secret = docker_secrets::try_get_secret_by_name("API_SECRET")
+        let api_secret = docker_secrets::try_get_secret_by_name("SECRETKEY")
             .map_err(|_| ConfigError::ApiSecretNotFound)?;
 
         // get domain
-        let domain = env::var("DOMAIN").map_err(|_| ConfigError::DomainNotFound)?;
+        let domain = env::var("DOMAINNAME").map_err(|_| ConfigError::DomainNotFound)?;
 
         // get subdomain
         let subdomain = env::var("SUBDOMAIN").ok();
