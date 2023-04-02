@@ -32,11 +32,14 @@ pub mod docker_secrets {
 }
 
 pub mod config {
+    use serde::{Deserialize, Serialize};
     use std::env;
 
-    #[derive(Debug)]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct Credentials {
+        #[serde(rename = "apikey")]
         pub api_key: String,
+        #[serde(rename = "secretapikey")]
         pub api_secret: String,
     }
 
@@ -60,10 +63,10 @@ pub mod config {
         dotenv::dotenv().ok();
 
         // get api key
-        let api_key = env::var("API_KEY").map_err(|_| ConfigError::ApiKeyNotFound)?;
+        let api_key = env::var("APIKEY").map_err(|_| ConfigError::ApiKeyNotFound)?;
 
         // get api secret
-        let api_secret = env::var("API_SECRET").map_err(|_| ConfigError::ApiSecretNotFound)?;
+        let api_secret = env::var("SECRETKEY").map_err(|_| ConfigError::ApiSecretNotFound)?;
 
         let credentials = Credentials {
             api_key,
@@ -71,7 +74,7 @@ pub mod config {
         };
 
         // get domain
-        let domain = env::var("DOMAIN").map_err(|_| ConfigError::DomainNotFound)?;
+        let domain = env::var("DOMAINNAME").map_err(|_| ConfigError::DomainNotFound)?;
 
         // get subdomain
         let subdomain = env::var("SUBDOMAIN").ok();

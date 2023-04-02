@@ -1,7 +1,12 @@
 {
   "cSpell.words": [
+    "APIKEY",
+    "DOMAINNAME",
     "dotenv",
     "dynapork",
-    "reqwest"
+    "porkbun",
+    "reqwest",
+    "secretapikey",
+    "SECRETKEY"
   ]
 }
