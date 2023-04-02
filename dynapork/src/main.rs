@@ -13,6 +13,9 @@ pub mod request_ip {
         message: String,
     }
 
+    // constants
+    const PING_URL: &'static str = "https://api-ipv4.porkbun.com/api/json/v3/ping";
+
     #[derive(Serialize, Deserialize)]
     struct SuccessResponse {
         status: String,
@@ -31,8 +34,7 @@ pub mod request_ip {
         client: &reqwest::blocking::Client,
         credentials: config::Credentials,
     ) -> Result<String, reqwest::Error> {
-        let url = "https://api-ipv4.porkbun.com/api/json/v3/ping";
-        let result = client.post(url).json(&credentials).send()?;
+        let result = client.post(PING_URL).json(&credentials).send()?;
         let response = result.json::<PingResponse>()?;
 
         match response {
