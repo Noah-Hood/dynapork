@@ -1,3 +1,6 @@
+// modules in external files
+pub mod porkbun;
+
 #[cfg(feature = "docker")]
 pub mod docker_secrets {
     use std::fs::File;
