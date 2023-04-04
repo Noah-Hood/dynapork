@@ -44,8 +44,8 @@ struct SuccessResponse {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum PingResponse {
-    SuccessResponse(SuccessResponse),
-    FailureResponse(FailureResponse),
+    Success(SuccessResponse),
+    Failure(FailureResponse),
 }
 
 pub fn request_ip<T: HttpClient>(
@@ -56,10 +56,55 @@ pub fn request_ip<T: HttpClient>(
     let response = result.json::<PingResponse>()?;
 
     match response {
-        PingResponse::SuccessResponse(response) => Ok(response.your_ip),
-        PingResponse::FailureResponse(response) => {
+        PingResponse::Success(response) => Ok(response.your_ip),
+        PingResponse::Failure(response) => {
             eprintln!("Error: {}", response.message);
             std::process::exit(1)
         }
+    }
+}
+
+#[cfg(test)]
+mod request_ip_tests {
+    use crate::config::Credentials;
+
+    use super::{request_ip, HttpClient, PingResponse, SuccessResponse};
+
+    struct MockHttpClient {
+        response: PingResponse,
+    }
+
+    impl HttpClient for MockHttpClient {
+        fn post_json<T: serde::Serialize>(
+            self: &MockHttpClient,
+            _url: &str,
+            _body: &T,
+        ) -> Result<reqwest::blocking::Response, reqwest::Error> {
+            let response_string =
+                serde_json::to_string(&self.response).unwrap_or("Could not serialize".to_owned());
+
+            let reqwest_response =
+                reqwest::blocking::Response::from(http::response::Response::new(response_string));
+            Ok(reqwest_response)
+        }
+    }
+
+    #[test]
+    fn returns_expected_ip_on_success() {
+        let credentials = Credentials {
+            api_key: "".to_owned(),
+            api_secret: "".to_owned(),
+        };
+        let expected_ip = String::from("192.168.1.1");
+        let expected_response = PingResponse::Success(SuccessResponse {
+            status: "SUCCESS".to_owned(),
+            your_ip: expected_ip.clone(),
+        });
+        let mock_client = MockHttpClient {
+            response: expected_response,
+        };
+        let result = request_ip(&mock_client, credentials).unwrap_or("failure".to_owned());
+
+        assert_eq!(result, expected_ip);
     }
 }
