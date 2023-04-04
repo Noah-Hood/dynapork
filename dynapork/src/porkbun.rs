@@ -4,6 +4,27 @@ use super::config;
 // external crates
 use reqwest;
 use serde::{Deserialize, Serialize};
+
+// traits
+pub trait HttpClient {
+    fn post_json<T: Serialize>(
+        &self,
+        url: &str,
+        body: &T,
+    ) -> Result<reqwest::blocking::Response, reqwest::Error>;
+}
+
+// implement HttpClient trait for reqwest Client
+impl HttpClient for reqwest::blocking::Client {
+    fn post_json<T: Serialize>(
+        self: &reqwest::blocking::Client,
+        url: &str,
+        body: &T,
+    ) -> Result<reqwest::blocking::Response, reqwest::Error> {
+        self.post(url).json(body).send()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct FailureResponse {
     status: String,
@@ -27,11 +48,11 @@ enum PingResponse {
     FailureResponse(FailureResponse),
 }
 
-pub fn request_ip(
-    client: &reqwest::blocking::Client,
+pub fn request_ip<T: HttpClient>(
+    client: &T,
     credentials: config::Credentials,
 ) -> Result<String, reqwest::Error> {
-    let result = client.post(PING_URL).json(&credentials).send()?;
+    let result = client.post_json(PING_URL, &credentials)?;
     let response = result.json::<PingResponse>()?;
 
     match response {
