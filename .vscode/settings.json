@@ -5,6 +5,7 @@
     "dotenv",
     "dynapork",
     "porkbun",
+    "purkbun",
     "reqwest",
     "secretapikey",
     "SECRETKEY"
