@@ -5,34 +5,12 @@ use super::config;
 use reqwest;
 use serde::{Deserialize, Serialize};
 
-// traits
-pub trait HttpClient {
-    fn post_json<T: Serialize>(
-        &self,
-        url: &str,
-        body: &T,
-    ) -> Result<reqwest::blocking::Response, reqwest::Error>;
-}
-
-// implement HttpClient trait for reqwest Client
-impl HttpClient for reqwest::blocking::Client {
-    fn post_json<T: Serialize>(
-        self: &reqwest::blocking::Client,
-        url: &str,
-        body: &T,
-    ) -> Result<reqwest::blocking::Response, reqwest::Error> {
-        self.post(url).json(body).send()
-    }
-}
-
+// purkbun API response types
 #[derive(Serialize, Deserialize)]
 struct FailureResponse {
     status: String,
     message: String,
 }
-
-// constants
-const PING_URL: &'static str = "https://api-ipv4.porkbun.com/api/json/v3/ping";
 
 #[derive(Serialize, Deserialize)]
 struct SuccessResponse {
@@ -48,19 +26,62 @@ enum PingResponse {
     Failure(FailureResponse),
 }
 
+// custom result types
+#[derive(Debug)]
+pub enum PorkbunError {
+    InvalidCredentialsError,
+    APIError(String),
+    ResponseDecodeError,
+    WebRequestError,
+}
+
+// traits
+pub trait HttpClient {
+    fn post_json<T: Serialize>(
+        &self,
+        url: &str,
+        body: &T,
+    ) -> Result<reqwest::blocking::Response, PorkbunError>;
+}
+
+// implement HttpClient trait for reqwest Client
+impl HttpClient for reqwest::blocking::Client {
+    fn post_json<T: Serialize>(
+        self: &reqwest::blocking::Client,
+        url: &str,
+        body: &T,
+    ) -> Result<reqwest::blocking::Response, PorkbunError> {
+        let result = self.post(url).json(body).send();
+        match result {
+            Ok(response) => Ok(response),
+            Err(_) => Err(PorkbunError::WebRequestError),
+        }
+    }
+}
+
+// constants
+const PING_URL: &'static str = "https://api-ipv4.porkbun.com/api/json/v3/ping";
+
+/// Request the current IP address from Porkbun
+/// # Arguments
+/// * `client` - A reference to an object that implements the HttpClient trait
+/// * `credentials` - A Credentials struct containing the API key and secret
+/// # Returns
+/// * `Ok(String)` - The current IP address
+/// * `Err(PorkbunError)` - An error occurred
 pub fn request_ip<T: HttpClient>(
     client: &T,
     credentials: config::Credentials,
-) -> Result<String, reqwest::Error> {
-    let result = client.post_json(PING_URL, &credentials)?;
-    let response = result.json::<PingResponse>()?;
-
-    match response {
-        PingResponse::Success(response) => Ok(response.your_ip),
-        PingResponse::Failure(response) => {
-            eprintln!("Error: {}", response.message);
-            std::process::exit(1)
-        }
+) -> Result<String, PorkbunError> {
+    let result = client.post_json(PING_URL, &credentials)?; // returns a PorkbunError, can propagate
+    let json_contents = result.json::<PingResponse>();
+    match json_contents {
+        Err(_) => Err(PorkbunError::ResponseDecodeError),
+        Ok(PingResponse::Success(response)) => Ok(response.your_ip),
+        Ok(PingResponse::Failure(response)) => match response.message.as_str() {
+            "Invalid API key. (002)" => Err(PorkbunError::InvalidCredentialsError),
+            _ => Err(PorkbunError::APIError(response.message)),
+        },
     }
 }
 
@@ -68,7 +89,7 @@ pub fn request_ip<T: HttpClient>(
 mod request_ip_tests {
     use crate::config::Credentials;
 
-    use super::{request_ip, HttpClient, PingResponse, SuccessResponse};
+    use super::{request_ip, HttpClient, PingResponse, PorkbunError, SuccessResponse};
 
     struct MockHttpClient {
         response: PingResponse,
@@ -79,7 +100,7 @@ mod request_ip_tests {
             self: &MockHttpClient,
             _url: &str,
             _body: &T,
-        ) -> Result<reqwest::blocking::Response, reqwest::Error> {
+        ) -> Result<reqwest::blocking::Response, PorkbunError> {
             let response_string =
                 serde_json::to_string(&self.response).unwrap_or("Could not serialize".to_owned());
 
