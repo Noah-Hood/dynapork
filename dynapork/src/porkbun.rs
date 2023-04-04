@@ -27,7 +27,7 @@ enum PingResponse {
 }
 
 // custom result types
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PorkbunError {
     InvalidCredentialsError,
     APIError(String),
@@ -71,7 +71,7 @@ const PING_URL: &'static str = "https://api-ipv4.porkbun.com/api/json/v3/ping";
 /// * `Err(PorkbunError)` - An error occurred
 pub fn request_ip<T: HttpClient>(
     client: &T,
-    credentials: config::Credentials,
+    credentials: &config::Credentials,
 ) -> Result<String, PorkbunError> {
     let result = client.post_json(PING_URL, &credentials)?; // returns a PorkbunError, can propagate
     let json_contents = result.json::<PingResponse>();
@@ -124,8 +124,49 @@ mod request_ip_tests {
         let mock_client = MockHttpClient {
             response: expected_response,
         };
-        let result = request_ip(&mock_client, credentials).unwrap_or("failure".to_owned());
+        let result = request_ip(&mock_client, &credentials).unwrap_or("failure".to_owned());
 
         assert_eq!(result, expected_ip);
+    }
+
+    #[test]
+    fn returns_credential_error_on_credential_failure() {
+        let credentials = Credentials {
+            api_key: "".to_owned(),
+            api_secret: "".to_owned(),
+        };
+        let expected_result = PorkbunError::InvalidCredentialsError;
+
+        let mock_client = MockHttpClient {
+            response: PingResponse::Failure(super::FailureResponse {
+                status: "ERROR".to_owned(),
+                message: "Invalid API key. (002)".to_owned(),
+            }),
+        };
+
+        let result = request_ip(&mock_client, &credentials).unwrap_err();
+
+        assert_eq!(expected_result, result);
+    }
+
+    #[test]
+    fn returns_unspecified_error_on_generic_failure() {
+        let credentials = Credentials {
+            api_key: "".to_owned(),
+            api_secret: "".to_owned(),
+        };
+        let expected_result =
+            PorkbunError::APIError("Non-specific, unknown error (000)".to_owned());
+
+        let mock_client = MockHttpClient {
+            response: PingResponse::Failure(super::FailureResponse {
+                status: "ERROR".to_owned(),
+                message: "Non-specific, unknown error (000)".to_owned(),
+            }),
+        };
+
+        let result = request_ip(&mock_client, &credentials).unwrap_err();
+
+        assert_eq!(expected_result, result);
     }
 }

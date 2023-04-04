@@ -15,7 +15,7 @@ fn main() {
     println!("{:?}", config);
 
     // step 2: request ip address
-    let ip = porkbun::request_ip(&reqwest_client, config.credentials);
+    let ip = porkbun::request_ip(&reqwest_client, &config.credentials);
 
     println!("{:?}", ip);
 }
