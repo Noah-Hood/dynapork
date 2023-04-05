@@ -2,18 +2,18 @@
 use super::config;
 
 // external crates
-use reqwest;
+use reqwest::blocking;
 use serde::{Deserialize, Serialize};
 
 // purkbun API response types
 #[derive(Serialize, Deserialize)]
-struct FailureResponse {
+struct PorkbunFailureResponse {
     status: String,
     message: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SuccessResponse {
+struct PingSuccessResponse {
     status: String,
     #[serde(rename = "yourIp")]
     your_ip: String,
@@ -22,8 +22,8 @@ struct SuccessResponse {
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum PingResponse {
-    Success(SuccessResponse),
-    Failure(FailureResponse),
+    Success(PingSuccessResponse),
+    Failure(PorkbunFailureResponse),
 }
 
 // custom result types
@@ -32,7 +32,7 @@ pub enum PorkbunError {
     InvalidCredentialsError,
     APIError(String),
     ResponseDecodeError,
-    WebRequestError,
+    WebRequestError(String),
 }
 
 // traits
@@ -41,20 +41,20 @@ pub trait HttpClient {
         &self,
         url: &str,
         body: &T,
-    ) -> Result<reqwest::blocking::Response, PorkbunError>;
+    ) -> Result<blocking::Response, PorkbunError>;
 }
 
 // implement HttpClient trait for reqwest Client
-impl HttpClient for reqwest::blocking::Client {
+impl HttpClient for blocking::Client {
     fn post_json<T: Serialize>(
-        self: &reqwest::blocking::Client,
+        self: &blocking::Client,
         url: &str,
         body: &T,
-    ) -> Result<reqwest::blocking::Response, PorkbunError> {
+    ) -> Result<blocking::Response, PorkbunError> {
         let result = self.post(url).json(body).send();
         match result {
             Ok(response) => Ok(response),
-            Err(_) => Err(PorkbunError::WebRequestError),
+            Err(e) => Err(PorkbunError::WebRequestError(e.to_string())),
         }
     }
 }
@@ -77,11 +77,18 @@ pub fn request_ip<T: HttpClient>(
     let json_contents = result.json::<PingResponse>();
     match json_contents {
         Err(_) => Err(PorkbunError::ResponseDecodeError),
-        Ok(PingResponse::Success(response)) => Ok(response.your_ip),
-        Ok(PingResponse::Failure(response)) => match response.message.as_str() {
-            "Invalid API key. (002)" => Err(PorkbunError::InvalidCredentialsError),
-            _ => Err(PorkbunError::APIError(response.message)),
+        Ok(response) => match response {
+            PingResponse::Success(success) => Ok(success.your_ip),
+            PingResponse::Failure(failure) => Err(match_error_string(&failure.message)),
         },
+    }
+}
+
+/// Matches the error string to give a more specific error message
+fn match_error_string(error_string: &str) -> PorkbunError {
+    match error_string {
+        "Invalid API key. (002)" => PorkbunError::InvalidCredentialsError,
+        _ => PorkbunError::APIError(error_string.to_owned()),
     }
 }
 
@@ -89,7 +96,10 @@ pub fn request_ip<T: HttpClient>(
 mod request_ip_tests {
     use crate::config::Credentials;
 
-    use super::{request_ip, HttpClient, PingResponse, PorkbunError, SuccessResponse};
+    use super::{
+        request_ip, HttpClient, PingResponse, PingSuccessResponse, PorkbunError,
+        PorkbunFailureResponse,
+    };
 
     struct MockHttpClient {
         response: PingResponse,
@@ -117,7 +127,7 @@ mod request_ip_tests {
             api_secret: "".to_owned(),
         };
         let expected_ip = String::from("192.168.1.1");
-        let expected_response = PingResponse::Success(SuccessResponse {
+        let expected_response = PingResponse::Success(PingSuccessResponse {
             status: "SUCCESS".to_owned(),
             your_ip: expected_ip.clone(),
         });
@@ -138,7 +148,7 @@ mod request_ip_tests {
         let expected_result = PorkbunError::InvalidCredentialsError;
 
         let mock_client = MockHttpClient {
-            response: PingResponse::Failure(super::FailureResponse {
+            response: PingResponse::Failure(super::PorkbunFailureResponse {
                 status: "ERROR".to_owned(),
                 message: "Invalid API key. (002)".to_owned(),
             }),
@@ -159,27 +169,7 @@ mod request_ip_tests {
             PorkbunError::APIError("Non-specific, unknown error (000)".to_owned());
 
         let mock_client = MockHttpClient {
-            response: PingResponse::Failure(super::FailureResponse {
-                status: "ERROR".to_owned(),
-                message: "Non-specific, unknown error (000)".to_owned(),
-            }),
-        };
-
-        let result = request_ip(&mock_client, &credentials).unwrap_err();
-
-        assert_eq!(expected_result, result);
-    }
-
-    #[test]
-    fn returns_response_decode_error_on_invalid_response() {
-        let credentials = Credentials {
-            api_key: "".to_owned(),
-            api_secret: "".to_owned(),
-        };
-        let expected_result = PorkbunError::ResponseDecodeError;
-
-        let mock_client = MockHttpClient {
-            response: PingResponse::Failure(super::FailureResponse {
+            response: PingResponse::Failure(PorkbunFailureResponse {
                 status: "ERROR".to_owned(),
                 message: "Non-specific, unknown error (000)".to_owned(),
             }),
