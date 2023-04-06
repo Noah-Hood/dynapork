@@ -23,3 +23,7 @@ Cargo.lock
 secrets/
 test.docker-compose.yml
 .env
+
+# Added by cargo
+
+/target
