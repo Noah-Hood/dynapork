@@ -1,7 +1,14 @@
+use dynapork::client;
+use dynapork::client::HttpClient;
 use dynapork::config;
+use reqwest::blocking;
 
 fn main() {
-    let config = config::try_read_config().unwrap();
+    let client = blocking::Client::new();
 
-    println!("{:?}", config);
+    let result = client
+        .post_json("https://httpbin.org/post", "Hello, world!")
+        .unwrap();
+
+    println!("{}", result);
 }
