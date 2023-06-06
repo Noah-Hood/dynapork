@@ -10,8 +10,5 @@
     "reqwest",
     "secretapikey",
     "SECRETKEY"
-  ],
-  "rust-analyzer.linkedProjects": [
-    "\\dynapork\\Cargo.toml"
   ]
 }
