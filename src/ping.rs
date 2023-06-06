@@ -79,39 +79,17 @@ mod ping_tests {
         response_body: T,
     }
 
-    impl HttpClient for MockHttpClient<String> {
+    impl<T: Serialize> HttpClient for MockHttpClient<T> {
         type ResponseBody = String;
 
-        fn post_json<T: Serialize>(
+        fn post_json<U: Serialize>(
             &self,
             _url: &str,
-            _body: T,
+            _body: U,
         ) -> Result<Self::ResponseBody, Box<dyn Error>> {
-            Ok(serde_json::to_string(&self.response_body)?)
-        }
-    }
+            let response_body = serde_json::to_string(&self.response_body)?;
 
-    impl HttpClient for MockHttpClient<PingSuccessResponse> {
-        type ResponseBody = String;
-
-        fn post_json<T: Serialize>(
-            &self,
-            _url: &str,
-            _body: T,
-        ) -> Result<Self::ResponseBody, Box<dyn Error>> {
-            Ok(serde_json::to_string(&self.response_body)?)
-        }
-    }
-
-    impl HttpClient for MockHttpClient<PingFailureResponse> {
-        type ResponseBody = String;
-
-        fn post_json<T: Serialize>(
-            &self,
-            _url: &str,
-            _body: T,
-        ) -> Result<Self::ResponseBody, Box<dyn Error>> {
-            Ok(serde_json::to_string(&self.response_body)?)
+            Ok(response_body)
         }
     }
 
