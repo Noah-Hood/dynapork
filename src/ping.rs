@@ -7,7 +7,7 @@ use crate::constants::PING_URL;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct PingSuccessResponse {
     status: String,
-    #[serde(rename = "yourIP")]
+    #[serde(rename = "yourIp")]
     your_ip: String,
 }
 
@@ -43,8 +43,10 @@ impl Error for PingError {}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Credentials {
-    api_key: String,
-    secret_key: String,
+    #[serde(rename = "apikey")]
+    pub api_key: String,
+    #[serde(rename = "secretapikey")]
+    pub secret_key: String,
 }
 
 /// Pings the Porkbun API with the provided client, returning the IP Address
@@ -55,9 +57,9 @@ pub fn ping(
 ) -> Result<String, Box<dyn Error>> {
     let response_body = client.post_json(PING_URL, credentials)?;
 
-    let response = serde_json::from_str::<PingResponse>(&response_body)?;
+    let parsed_response = serde_json::from_str::<PingResponse>(&response_body)?;
 
-    match response {
+    match parsed_response {
         PingResponse::Success(success) => Ok(success.your_ip),
         PingResponse::Failure(failure) => match failure.message.as_str() {
             "Invalid API key. (002)" => Err(Box::new(PingError::InvalidCredentials)),
@@ -128,7 +130,8 @@ mod ping_tests {
 
         let expected_result = Box::new(super::PingError::InvalidCredentials);
 
-        // downcast the error to PingError and compare
+        // downcast the dynamic Error to PingError and compare
+        // will fail if cannot be downcast to PingError
         assert_eq!(result.downcast::<PingError>().unwrap(), expected_result);
     }
 }
