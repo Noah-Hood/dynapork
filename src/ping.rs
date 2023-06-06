@@ -103,6 +103,18 @@ mod ping_tests {
         }
     }
 
+    impl HttpClient for MockHttpClient<PingFailureResponse> {
+        type ResponseBody = String;
+
+        fn post_json<T: Serialize>(
+            &self,
+            _url: &str,
+            _body: T,
+        ) -> Result<Self::ResponseBody, Box<dyn Error>> {
+            Ok(serde_json::to_string(&self.response_body)?)
+        }
+    }
+
     #[test]
     fn returns_ip_provided_by_api_on_success() {
         let default_credentials = Credentials {
@@ -128,14 +140,17 @@ mod ping_tests {
             secret_key: "SK".to_string(),
         };
         let client = MockHttpClient {
-            response_body: String::from(r#"{"status":"ERROR","message":"Invalid API key. (002)"}"#),
+            response_body: PingFailureResponse {
+                status: "ERROR".to_string(),
+                message: "Invalid API key. (002)".to_string(),
+            },
         };
 
         let result = ping(&client, &default_credentials).unwrap_err();
 
-        assert_eq!(
-            result.downcast_ref::<PingError>(),
-            Some(&PingError::InvalidCredentials)
-        );
+        let expected_result = Box::new(super::PingError::InvalidCredentials);
+
+        // downcast the error to PingError and compare
+        assert_eq!(result.downcast::<PingError>().unwrap(), expected_result);
     }
 }
