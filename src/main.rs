@@ -1,6 +1,8 @@
 // use dynapork::client;
+use dynapork::common_types::Credentials;
 use dynapork::config;
-use dynapork::ping::{ping, Credentials};
+// use dynapork::ping::ping;
+use dynapork::retrieve::retrieve_records_by_domain;
 use reqwest::blocking;
 
 fn main() {
@@ -13,10 +15,12 @@ fn main() {
         secret_key: config.secret_key,
     };
 
-    let result = ping(&client, &credentials);
+    let domain = "noah-hood.io";
+
+    let result = retrieve_records_by_domain(&client, &credentials, &domain);
 
     match result {
-        Ok(ip) => println!("Your IP address is: {}", ip),
+        Ok(d) => println!("{:?}", d),
         Err(e) => println!("Error: {}", e),
     }
 }

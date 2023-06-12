@@ -9,3 +9,4 @@ pub const RECORD_TYPE_VAR_NAME: &str = "RECORDTYPE";
 
 // API constants
 pub const PING_URL: &str = "https://api-ipv4.porkbun.com/api/json/v3/ping";
+pub const RETRIEVE_URL: &str = "https://api-ipv4.porkbun.com/api/json/v3/dns/retrieve";
