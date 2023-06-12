@@ -8,7 +8,7 @@ pub struct Credentials {
     pub secret_key: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum RecordType {
     A,
     MX,

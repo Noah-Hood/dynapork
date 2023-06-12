@@ -11,7 +11,8 @@ fn main() {
     let config = config::try_read_config().unwrap();
 
     let credentials = Credentials {
-        api_key: config.api_key,
+        // api_key: config.api_key,
+        api_key: "".to_string(),
         secret_key: config.secret_key,
     };
 
