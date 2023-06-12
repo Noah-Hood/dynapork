@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 use crate::client::HttpClient;
+use crate::common_types::Credentials;
 use crate::constants::PING_URL;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -40,14 +41,6 @@ impl std::fmt::Display for PingError {
 }
 
 impl Error for PingError {}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Credentials {
-    #[serde(rename = "apikey")]
-    pub api_key: String,
-    #[serde(rename = "secretapikey")]
-    pub secret_key: String,
-}
 
 /// Pings the Porkbun API with the provided client, returning the IP Address
 /// of the caller, if successful, and an error otherwise.
