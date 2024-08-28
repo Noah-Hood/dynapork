@@ -1,11 +1,17 @@
 package httpclient
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"time"
 )
+
+// custom error type for rate limit
+type RateLimitedError struct{}
+
+func (e *RateLimitedError) Error() string {
+	return "rate limit exceeded"
+}
 
 type IHttpClient interface {
 	TryFetchString(url string) (string, error)
@@ -63,7 +69,7 @@ func (r RateLimitedHttpClient) TryFetchString(url string) (string, error) {
 
 		return string(bodyBytes), nil
 
-	default:
-		return "", errors.New("rate limit exceeded")
+	default: // rate limit exceeded
+		return "", &RateLimitedError{}
 	}
 }
