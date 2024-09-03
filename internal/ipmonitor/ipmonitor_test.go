@@ -29,6 +29,10 @@ func (m *MockHttpClient) TryFetchString(url string) (string, error) {
 	}
 }
 
+func (m *MockHttpClient) TryPostJSON(_ string, _ interface{}) (io.ReadCloser, error) {
+	return nil, nil
+}
+
 func TestIpMonitorV4(t *testing.T) {
 	logger := log.New(io.Discard, "", log.LstdFlags)
 
