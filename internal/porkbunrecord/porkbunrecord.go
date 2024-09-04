@@ -68,9 +68,8 @@ func genericUnspecified(rt RecordType) netip.Addr {
 	}
 }
 
-// constructor for a new DNS record
-// fetches existing DNS information to populate Answer field
-// if no answer can be found, errors.
+// Constructor for a new DNS record.
+// Fetches existing DNS information to populate Answer field; if no answer can be found, returns an error.
 // This is because the DNSRecord can *only* update existing records, not create new ones.
 func NewDNSRecord(domain string, subdomain string, recordType RecordType, ttl uint, auth *PBAuth, client httpclient.IHttpClient) (DNSRecord, error) {
 	record := DNSRecord{
@@ -93,7 +92,12 @@ func NewDNSRecord(domain string, subdomain string, recordType RecordType, ttl ui
 	return record, nil
 }
 
+// Gets the current content i.e. the current IP Address pointed to by a given record.
+// Fails when there is no record set, or when there is more than one record set.
+// On failure, returns an unspecified IP address in line with the type of record.
+// e.g. an A record returns an unspecified IPV4, AAAA returns unspecified IPV6.
 func (d *DNSRecord) getCurrentContent() (netip.Addr, error) {
+	// submit web request
 	url := constructRetrieveUrl(d)
 
 	res, err := d.Client.TryPostJSON(url, d.Auth)
@@ -101,6 +105,7 @@ func (d *DNSRecord) getCurrentContent() (netip.Addr, error) {
 		return genericUnspecified(d.RecordType), nil
 	}
 
+	// handle response
 	switch res.StatusCode {
 	// request successful, read results and pass along parsed IP address value
 	case http.StatusOK:
@@ -140,14 +145,20 @@ func (d *DNSRecord) getCurrentContent() (netip.Addr, error) {
 
 	// handle any failure; the message is within the returned JSON, not the header
 	default:
-		var failureResult PBFailResponse
-		if err := json.NewDecoder(res.Body).Decode(&failureResult); err != nil {
-			return genericUnspecified(d.RecordType), err
-		}
-		return genericUnspecified(d.RecordType), &APIError{
-			code:    res.StatusCode,
-			message: failureResult.Message,
-		}
+		return genericUnspecified(d.RecordType), handleFailureResult(res)
+	}
+}
+
+// Handles an API failure.
+// Parses the failure JSON, if possible, to extract a meaningful error message.
+func handleFailureResult(response *http.Response) error {
+	var failureResult PBFailResponse
+	if err := json.NewDecoder(response.Body).Decode(&failureResult); err != nil {
+		return err
+	}
+	return &APIError{
+		code:    response.StatusCode,
+		message: failureResult.Message,
 	}
 }
 
