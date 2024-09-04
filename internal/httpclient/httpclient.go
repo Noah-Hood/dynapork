@@ -28,7 +28,7 @@ type RateLimitedHttpClient struct {
 }
 
 // construct a new IHttpClient instance
-func RateLimitedHttpClient_new(requestsPerSecond int) IHttpClient {
+func NewRateLimitedClient(requestsPerSecond int) IHttpClient {
 	limiter := time.NewTicker(time.Second / time.Duration(requestsPerSecond))
 	tokenPool := make(chan bool, 2)
 	tokenPool <- true // prime token pool at initialization to prevent dead time
@@ -94,7 +94,7 @@ func (r RateLimitedHttpClient) TryPostJSON(url string, jsonInput interface{}) (i
 		}
 
 		response, err := r.client.Do(request)
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 
