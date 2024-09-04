@@ -3,7 +3,6 @@ package httpclient
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -18,7 +17,7 @@ func (e *RateLimitedError) Error() string {
 
 type IHttpClient interface {
 	TryFetchString(url string) (string, error)
-	TryPostJSON(url string, jsonInput interface{}) (io.ReadCloser, error)
+	TryPostJSON(url string, jsonInput interface{}) (*http.Response, error)
 }
 
 type RateLimitedHttpClient struct {
@@ -79,8 +78,8 @@ func (r RateLimitedHttpClient) TryFetchString(url string) (string, error) {
 }
 
 // attempts to post a json payload to a provided url,
-// returning a ReadCloser of the bytes of the received response
-func (r RateLimitedHttpClient) TryPostJSON(url string, jsonInput interface{}) (io.ReadCloser, error) {
+// returns the response directly for later processing
+func (r RateLimitedHttpClient) TryPostJSON(url string, jsonInput interface{}) (*http.Response, error) {
 	select {
 	case <-r.tokenPool: // token available
 		requestData, err := json.Marshal(jsonInput)
@@ -98,11 +97,7 @@ func (r RateLimitedHttpClient) TryPostJSON(url string, jsonInput interface{}) (i
 			return nil, err
 		}
 
-		if response.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("failed to post json request w/ status code %d: %s", response.StatusCode, response.Status)
-		} else {
-			return response.Body, nil
-		}
+		return response, nil
 
 	default: // rate limit exceeded
 		return nil, &RateLimitedError{}

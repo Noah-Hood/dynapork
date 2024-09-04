@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/netip"
 	"reflect"
 	"testing"
@@ -19,7 +20,7 @@ func (m MockHttpClient) TryFetchString(_ string) (string, error) {
 	return "", nil
 }
 
-func (m MockHttpClient) TryPostJSON(_ string, auth interface{}) (io.ReadCloser, error) {
+func (m MockHttpClient) TryPostJSON(_ string, auth interface{}) (*http.Response, error) {
 	jsonValue, err := json.Marshal(m.returnValue)
 	if err != nil {
 		return nil, err
@@ -27,7 +28,13 @@ func (m MockHttpClient) TryPostJSON(_ string, auth interface{}) (io.ReadCloser, 
 
 	buffer := bytes.NewBuffer(jsonValue)
 
-	return io.NopCloser(buffer), nil
+	response := http.Response{}
+	response.Status = "OK"
+	response.StatusCode = 200
+	response.Body = io.NopCloser(buffer)
+	response.Header = make(http.Header)
+
+	return &response, nil
 }
 
 func TestARecordNew(t *testing.T) {

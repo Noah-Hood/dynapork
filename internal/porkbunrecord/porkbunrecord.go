@@ -61,13 +61,13 @@ func (a *ARecord) getCurrentAnswer() (netip.Addr, error) {
 	// fetch existing record information
 	url := fmt.Sprintf(dnsRecordFetchURL, a.DnsRecord.Domain, "A", a.DnsRecord.Host)
 	var dnsRetrieveResponse PBDNSRetrieveResponse
-	bodyReader, err := a.Client.TryPostJSON(url, a.Pbauth)
+	response, err := a.Client.TryPostJSON(url, a.Pbauth)
 	if err != nil { // failed response, set unspecified
 		return netip.IPv4Unspecified(), err
 	}
-	defer bodyReader.Close()
+	defer response.Body.Close()
 
-	if err = json.NewDecoder(bodyReader).Decode(&dnsRetrieveResponse); err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&dnsRetrieveResponse); err != nil {
 		return netip.IPv4Unspecified(), err
 	}
 
@@ -120,13 +120,13 @@ func (a *AAAARecord) getCurrentAnswer() (netip.Addr, error) {
 	// fetch existing record information
 	url := fmt.Sprintf(dnsRecordFetchURL, a.DnsRecord.Domain, "AAAA", a.DnsRecord.Host)
 	var dnsRetrieveResponse PBDNSRetrieveResponse
-	bodyReader, err := a.Client.TryPostJSON(url, a.Pbauth)
+	response, err := a.Client.TryPostJSON(url, a.Pbauth)
 	if err != nil { // failed response, set unspecified
 		return netip.IPv6Unspecified(), err
 	}
-	defer bodyReader.Close()
+	defer response.Body.Close()
 
-	if err = json.NewDecoder(bodyReader).Decode(&dnsRetrieveResponse); err != nil {
+	if err = json.NewDecoder(response.Body).Decode(&dnsRetrieveResponse); err != nil {
 		return netip.IPv6Unspecified(), err
 	}
 

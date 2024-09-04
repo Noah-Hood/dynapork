@@ -3,6 +3,7 @@ package ipmonitor_test
 import (
 	"io"
 	"log"
+	"net/http"
 	"net/netip"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ func (m *MockHttpClient) TryFetchString(url string) (string, error) {
 	}
 }
 
-func (m *MockHttpClient) TryPostJSON(_ string, _ interface{}) (io.ReadCloser, error) {
+func (m *MockHttpClient) TryPostJSON(_ string, _ interface{}) (*http.Response, error) {
 	return nil, nil
 }
 
