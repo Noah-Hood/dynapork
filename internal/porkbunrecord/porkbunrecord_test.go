@@ -37,116 +37,93 @@ func (m MockHttpClient) TryPostJSON(_ string, auth interface{}) (*http.Response,
 	return &response, nil
 }
 
-func TestARecordNew(t *testing.T) {
-	// logger := log.New(io.Discard, "", log.LstdFlags)
+func TestConstructor(t *testing.T) {
+	dummyAuth := porkbunrecord.PBAuth{
+		Secretapikey: "sk",
+		ApiKey:       "ak",
+	}
 
-	t.Run("hits the API to request the initial value; sets unspecified when not extant", func(t *testing.T) {
-		// arrange
-		pbReturnValue := porkbunrecord.PBDNSRetrieveResponse{
-			Status:     "SUCCESS",
-			Cloudflare: "enabled",
-			Records:    []porkbunrecord.PBDNSRecordResponse{},
-		}
-
-		client := MockHttpClient{
-			returnValue: pbReturnValue,
-		}
-
-		auth := porkbunrecord.PBAuth{
-			Secretapikey: "sk",
-			ApiKey:       "ak",
-		}
-
-		expectedResponse := porkbunrecord.ARecord{
-			DnsRecord: porkbunrecord.GenericDNSRecord{
-				Domain: "domain.ext",
-				Host:   "www",
-				Answer: netip.IPv4Unspecified(),
-				Ttl:    600,
-			},
-			Pbauth: &auth,
-			Client: &client,
-		}
-
-		// act
-		actualResponse, err := porkbunrecord.NewARecord("domain.ext", "www", 600, &auth, &client)
-
-		// expect actualResponse to be of type porkbun.ARecord
-		actualARecordResponse, ok := actualResponse.(*porkbunrecord.ARecord)
-		if !ok {
-			t.Fatalf("expected %v to be of type porkbunrecord.ARecord", actualARecordResponse)
-		}
-
-		if err != nil {
-			t.Fatalf("failed to create A record: %v", err)
-		}
-
-		if !reflect.DeepEqual(&expectedResponse, actualResponse) {
-			t.Fatalf("expected %v to equal %v", &expectedResponse, actualARecordResponse)
-		}
-	})
-
-	t.Run("hits the API to request the initial value; sets value when extant", func(t *testing.T) {
+	t.Run("sets the current content when retrieved from the API (v4)", func(t *testing.T) {
 		// arrange
 		pbReturnValue := porkbunrecord.PBDNSRetrieveResponse{
 			Status:     "SUCCESS",
 			Cloudflare: "enabled",
 			Records: []porkbunrecord.PBDNSRecordResponse{
 				{
-					Id:      "0123456789",
-					Name:    "www.domain.ext",
+					Id:      "123456789",
+					Name:    "sdm.noah-hood.io",
 					Type:    "A",
-					Content: "66.65.34.128",
+					Content: "66.65.64.63",
 					Ttl:     "600",
 					Prio:    "",
-					Notes:   "",
+					Notes:   "a record for sdm subdomain",
 				},
 			},
 		}
 
-		client := MockHttpClient{
-			returnValue: pbReturnValue,
-		}
-
-		auth := porkbunrecord.PBAuth{
-			Secretapikey: "sk",
-			ApiKey:       "ak",
-		}
-
-		expectedResponse := porkbunrecord.ARecord{
-			DnsRecord: porkbunrecord.GenericDNSRecord{
-				Domain: "domain.ext",
-				Host:   "www",
-				Answer: netip.AddrFrom4([4]byte{66, 65, 34, 128}),
-				Ttl:    600,
-			},
-			Pbauth: &auth,
-			Client: &client,
+		client := MockHttpClient{returnValue: pbReturnValue}
+		expectedResponse := porkbunrecord.DNSRecord{
+			Domain:     "noah-hood.io",
+			Subdomain:  "sdm",
+			RecordType: porkbunrecord.A,
+			Answer:     netip.AddrFrom4([4]byte{66, 65, 64, 63}),
+			Ttl:        600,
+			Client:     &client,
+			Auth:       &dummyAuth,
 		}
 
 		// act
-		actualResponse, err := porkbunrecord.NewARecord("domain.ext", "www", 600, &auth, &client)
-
-		// expect actualResponse to be of type porkbun.ARecord
-		actualARecordResponse, ok := actualResponse.(*porkbunrecord.ARecord)
-		if !ok {
-			t.Fatalf("expected %v to be of type porkbunrecord.ARecord", actualARecordResponse)
-		}
-
+		actualResponse, err := porkbunrecord.NewDNSRecord("noah-hood.io", "sdm", porkbunrecord.A, 600, &dummyAuth, &client)
 		if err != nil {
-			t.Fatalf("failed to create A record: %v", err)
+			t.Fatalf("failed to create new DNS record")
 		}
 
-		if !reflect.DeepEqual(&expectedResponse, actualResponse) {
-			t.Fatalf("expected %v to equal %v", &expectedResponse, actualARecordResponse)
+		if !reflect.DeepEqual(expectedResponse, actualResponse) {
+			t.Fatalf("expected %v to equal %v", expectedResponse, actualResponse)
 		}
 	})
-}
 
-func TestAAAARecordNew(t *testing.T) {
-	// logger := log.New(io.Discard, "", log.LstdFlags)
+	t.Run("sets the current content when retrieved from the API (v6)", func(t *testing.T) {
+		// arrange
+		pbReturnValue := porkbunrecord.PBDNSRetrieveResponse{
+			Status:     "SUCCESS",
+			Cloudflare: "enabled",
+			Records: []porkbunrecord.PBDNSRecordResponse{
+				{
+					Id:      "123456789",
+					Name:    "sdm.noah-hood.io",
+					Type:    "AAAA",
+					Content: "839c:7b4c:9651:5a20:74e9:6165:2c5d:a126",
+					Ttl:     "600",
+					Prio:    "",
+					Notes:   "a record for sdm subdomain",
+				},
+			},
+		}
 
-	t.Run("hits the API to request the initial value; sets unspecified when not extant", func(t *testing.T) {
+		client := MockHttpClient{returnValue: pbReturnValue}
+		expectedResponse := porkbunrecord.DNSRecord{
+			Domain:     "noah-hood.io",
+			Subdomain:  "sdm",
+			RecordType: porkbunrecord.AAAA,
+			Answer:     netip.MustParseAddr("839c:7b4c:9651:5a20:74e9:6165:2c5d:a126"),
+			Ttl:        600,
+			Client:     &client,
+			Auth:       &dummyAuth,
+		}
+
+		// act
+		actualResponse, err := porkbunrecord.NewDNSRecord("noah-hood.io", "sdm", porkbunrecord.AAAA, 600, &dummyAuth, &client)
+		if err != nil {
+			t.Fatalf("failed to create new DNS record")
+		}
+
+		if !reflect.DeepEqual(expectedResponse, actualResponse) {
+			t.Fatalf("expected %v to equal %v", expectedResponse, actualResponse)
+		}
+	})
+
+	t.Run("errors out when there is no extant record on the API side", func(t *testing.T) {
 		// arrange
 		pbReturnValue := porkbunrecord.PBDNSRetrieveResponse{
 			Status:     "SUCCESS",
@@ -154,97 +131,66 @@ func TestAAAARecordNew(t *testing.T) {
 			Records:    []porkbunrecord.PBDNSRecordResponse{},
 		}
 
-		client := MockHttpClient{
-			returnValue: pbReturnValue,
-		}
-
-		auth := porkbunrecord.PBAuth{
-			Secretapikey: "sk",
-			ApiKey:       "ak",
-		}
-
-		expectedResponse := porkbunrecord.AAAARecord{
-			DnsRecord: porkbunrecord.GenericDNSRecord{
-				Domain: "domain.ext",
-				Host:   "www",
-				Answer: netip.IPv6Unspecified(),
-				Ttl:    600,
-			},
-			Pbauth: &auth,
-			Client: &client,
+		client := MockHttpClient{returnValue: pbReturnValue}
+		expectedResponse := &porkbunrecord.NoRecordError{
+			Domain:     "noah-hood.io",
+			Subdomain:  "sdm",
+			Recordtype: "AAAA",
 		}
 
 		// act
-		actualResponse, err := porkbunrecord.NewAAAARecord("domain.ext", "www", 600, &auth, &client)
+		_, err := porkbunrecord.NewDNSRecord("noah-hood.io", "sdm", porkbunrecord.AAAA, 600, &dummyAuth, &client)
 
-		// expect actualResponse to be of type porkbun.ARecord
-		actualAAAARecordResponse, ok := actualResponse.(*porkbunrecord.AAAARecord)
-		if !ok {
-			t.Fatalf("expected %v to be of type porkbunrecord.ARecord", actualAAAARecordResponse)
+		if err == nil {
+			t.Fatalf("expected to receive an error value, received nil")
 		}
 
-		if err != nil {
-			t.Fatalf("failed to create A record: %v", err)
-		}
-
-		if !reflect.DeepEqual(&expectedResponse, actualResponse) {
-			t.Fatalf("expected %v to equal %v", &expectedResponse, actualAAAARecordResponse)
+		if !reflect.DeepEqual(expectedResponse, err) {
+			t.Fatalf("expected to receive %v, received %v", expectedResponse, err)
 		}
 	})
 
-	t.Run("hits the API to request the initial value; sets value when extant", func(t *testing.T) {
+	t.Run("errors out when there is more than one record for a single DNSRecord", func(t *testing.T) {
 		// arrange
 		pbReturnValue := porkbunrecord.PBDNSRetrieveResponse{
 			Status:     "SUCCESS",
 			Cloudflare: "enabled",
 			Records: []porkbunrecord.PBDNSRecordResponse{
 				{
-					Id:      "0123456789",
-					Name:    "www.domain.ext",
-					Type:    "AAAA",
-					Content: "172a:a61e:8e1b:f0ee:6942:e41f:7f66:17c5",
+					Id:      "123456789",
+					Name:    "sdm.noah-hood.io",
+					Type:    "A",
+					Content: "66.65.64.63",
 					Ttl:     "600",
 					Prio:    "",
-					Notes:   "",
+					Notes:   "a record for sdm subdomain",
+				},
+				{
+					Id:      "123456790",
+					Name:    "sdm.noah-hood.io",
+					Type:    "A",
+					Content: "66.65.64.62",
+					Ttl:     "600",
+					Prio:    "",
+					Notes:   "a second record for sdm subdomain",
 				},
 			},
 		}
 
-		client := MockHttpClient{
-			returnValue: pbReturnValue,
+		client := MockHttpClient{returnValue: pbReturnValue}
+		expectedResponse := &porkbunrecord.AmbiguousRecordError{
+			Domain:     "noah-hood.io",
+			Subdomain:  "sdm",
+			Recordtype: "A",
 		}
-
-		auth := porkbunrecord.PBAuth{
-			Secretapikey: "sk",
-			ApiKey:       "ak",
-		}
-
-		expectedResponse := porkbunrecord.AAAARecord{
-			DnsRecord: porkbunrecord.GenericDNSRecord{
-				Domain: "domain.ext",
-				Host:   "www",
-				Answer: netip.MustParseAddr("172a:a61e:8e1b:f0ee:6942:e41f:7f66:17c5"),
-				Ttl:    600,
-			},
-			Pbauth: &auth,
-			Client: &client,
-		}
-
 		// act
-		actualResponse, err := porkbunrecord.NewAAAARecord("domain.ext", "www", 600, &auth, &client)
-
-		// expect actualResponse to be of type porkbun.ARecord
-		actualAAAARecordResponse, ok := actualResponse.(*porkbunrecord.AAAARecord)
-		if !ok {
-			t.Fatalf("expected %v to be of type porkbunrecord.AAAARecord", actualAAAARecordResponse)
+		_, err := porkbunrecord.NewDNSRecord("noah-hood.io", "sdm", porkbunrecord.A, 600, &dummyAuth, &client)
+		if err == nil {
+			t.Fatalf("expected to receive an error, received nil")
 		}
 
-		if err != nil {
-			t.Fatalf("failed to create AAAA record: %v", err)
-		}
-
-		if !reflect.DeepEqual(&expectedResponse, actualResponse) {
-			t.Fatalf("expected %v to equal %v", &expectedResponse, actualAAAARecordResponse)
+		if !reflect.DeepEqual(expectedResponse, err) {
+			t.Fatalf("expected %v to equal %v", expectedResponse, err)
 		}
 	})
 }

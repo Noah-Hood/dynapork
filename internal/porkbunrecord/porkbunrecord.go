@@ -3,6 +3,7 @@ package porkbunrecord
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/netip"
 
 	"github.com/hoodnoah/dynapork/internal/httpclient"
@@ -10,139 +11,169 @@ import (
 
 const dnsRecordFetchURL = "https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s" // url, type, subdomain
 
-type InvalidAPIKeysError struct{}
+type RecordType uint
 
-func (i *InvalidAPIKeysError) Error() string {
-	return "status 400: invalid API keys (001)"
+const (
+	A RecordType = iota
+	AAAA
+)
+
+type DNSRecord struct {
+	Domain     string
+	Subdomain  string
+	RecordType RecordType
+	Answer     netip.Addr
+	Ttl        uint
+	Client     httpclient.IHttpClient
+	Auth       *PBAuth
 }
 
-type IPBRecord interface{}
-
-type GenericDNSRecord struct {
-	Domain string
-	Host   string
-	Answer netip.Addr
-	Ttl    uint
+type APIError struct {
+	code    int
+	message string
 }
 
-type ARecord struct {
-	DnsRecord GenericDNSRecord
-	Pbauth    *PBAuth
-	Client    httpclient.IHttpClient
+func (a *APIError) Error() string {
+	return fmt.Sprintf("porkbun API request failed with status %d: %s", a.code, a.message)
 }
 
-// creates a new A record struct
-// tries fetching the existing record's ip address to prevent re-setting the same value at launch
-func NewARecord(domain string, host string, ttl uint, auth *PBAuth, client httpclient.IHttpClient) (IPBRecord, error) {
-	record := ARecord{
-		DnsRecord: GenericDNSRecord{
-			Domain: domain,
-			Host:   host,
-			Answer: netip.IPv4Unspecified(),
-			Ttl:    ttl,
-		},
-		Pbauth: auth,
-		Client: client,
+type NoRecordError struct {
+	Domain     string
+	Subdomain  string
+	Recordtype string
+}
+
+func (n *NoRecordError) Error() string {
+	return fmt.Sprintf("no record exists for the provided domain, subdomain, and type: %s, %s, %s", n.Domain, n.Subdomain, n.Recordtype)
+}
+
+type AmbiguousRecordError struct {
+	Domain     string
+	Subdomain  string
+	Recordtype string
+}
+
+func (a *AmbiguousRecordError) Error() string {
+	return fmt.Sprintf("more than one record exists for the provided domain, subdomain, and type: %s, %s, %s", a.Domain, a.Subdomain, a.Recordtype)
+}
+
+func genericUnspecified(rt RecordType) netip.Addr {
+	switch rt {
+	case A:
+		return netip.IPv4Unspecified()
+	case AAAA:
+		return netip.IPv6Unspecified()
+	default:
+		return netip.Addr{}
+	}
+}
+
+// constructor for a new DNS record
+// fetches existing DNS information to populate Answer field
+// if no answer can be found, errors.
+// This is because the DNSRecord can *only* update existing records, not create new ones.
+func NewDNSRecord(domain string, subdomain string, recordType RecordType, ttl uint, auth *PBAuth, client httpclient.IHttpClient) (DNSRecord, error) {
+	record := DNSRecord{
+		Domain:     domain,
+		Subdomain:  subdomain,
+		RecordType: recordType,
+		Answer:     genericUnspecified(recordType),
+		Ttl:        ttl,
+		Client:     client,
+		Auth:       auth,
 	}
 
-	// try and populate the existing IP record
-	address, err := record.getCurrentAnswer()
+	ip, err := record.getCurrentContent()
 	if err != nil {
-		return nil, err
+		return DNSRecord{}, err
 	}
 
-	record.DnsRecord.Answer = address
+	record.Answer = ip
 
-	return &record, nil
+	return record, nil
 }
 
-// fetches the current answer for a given IP record.
-func (a *ARecord) getCurrentAnswer() (netip.Addr, error) {
-	// fetch existing record information
-	url := fmt.Sprintf(dnsRecordFetchURL, a.DnsRecord.Domain, "A", a.DnsRecord.Host)
-	var dnsRetrieveResponse PBDNSRetrieveResponse
-	response, err := a.Client.TryPostJSON(url, a.Pbauth)
-	if err != nil { // failed response, set unspecified
-		return netip.IPv4Unspecified(), err
-	}
-	defer response.Body.Close()
+func (d *DNSRecord) getCurrentContent() (netip.Addr, error) {
+	url := constructRetrieveUrl(d)
 
-	if err = json.NewDecoder(response.Body).Decode(&dnsRetrieveResponse); err != nil {
-		return netip.IPv4Unspecified(), err
-	}
-
-	// no record set
-	if len(dnsRetrieveResponse.Records) < 1 {
-		return netip.IPv4Unspecified(), nil
-	}
-
-	// take first result if multiple; each record *should* only correspond to
-	// a single record on Porkbun's end
-	rcd := dnsRetrieveResponse.Records[0]
-
-	content := rcd.Content
-	contentIP, err := netip.ParseAddr(content)
+	res, err := d.Client.TryPostJSON(url, d.Auth)
 	if err != nil {
-		return netip.IPv4Unspecified(), nil
+		return genericUnspecified(d.RecordType), nil
 	}
-	return contentIP, nil
+
+	switch res.StatusCode {
+	// request successful, read results and pass along parsed IP address value
+	case http.StatusOK:
+		// parse result
+		var retrieveResult PBDNSRetrieveResponse
+		if err := json.NewDecoder(res.Body).Decode(&retrieveResult); err != nil {
+			return genericUnspecified(d.RecordType), err
+		}
+		// if there's no record in the API, return an error; do not create a record
+		if len(retrieveResult.Records) < 1 {
+			return genericUnspecified(d.RecordType), &NoRecordError{
+				Domain:     d.Domain,
+				Subdomain:  d.Subdomain,
+				Recordtype: recordTypeToString(d.RecordType),
+			}
+		}
+
+		// if there is more than one record, return an error
+		// there should only ever be 1 dns record for a given endpoint
+		// managed by this client
+		if len(retrieveResult.Records) > 1 {
+			return genericUnspecified(d.RecordType), &AmbiguousRecordError{
+				Domain:     d.Domain,
+				Subdomain:  d.Subdomain,
+				Recordtype: recordTypeToString(d.RecordType),
+			}
+		}
+
+		// try parsing first and only result into an ip address
+		ip, err := netip.ParseAddr(retrieveResult.Records[0].Content)
+		if err != nil {
+			return genericUnspecified(d.RecordType), err
+		}
+
+		// return ip on success
+		return ip, nil // likely should validate that the ip address type matches the expected type, e.g. v4 vs v6
+
+	// handle any failure; the message is within the returned JSON, not the header
+	default:
+		var failureResult PBFailResponse
+		if err := json.NewDecoder(res.Body).Decode(&failureResult); err != nil {
+			return genericUnspecified(d.RecordType), err
+		}
+		return genericUnspecified(d.RecordType), &APIError{
+			code:    res.StatusCode,
+			message: failureResult.Message,
+		}
+	}
 }
 
-type AAAARecord struct {
-	DnsRecord GenericDNSRecord
-	Pbauth    *PBAuth
-	Client    httpclient.IHttpClient
+// forms the parts of the Retrieval URL based on the constituent members of a DNSRecord
+func constructRetrieveUrl(d *DNSRecord) string {
+	var typeString string
+	switch d.RecordType {
+	case A:
+		typeString = "A"
+	case AAAA:
+		typeString = "AAAA"
+	default:
+		typeString = ""
+	}
+
+	return fmt.Sprintf(dnsRecordFetchURL, d.Domain, typeString, d.Subdomain)
 }
 
-// creates a new AAAA record struct with an unspecified IP address answer
-func NewAAAARecord(domain string, host string, ttl uint, auth *PBAuth, client httpclient.IHttpClient) (IPBRecord, error) {
-	record := AAAARecord{
-		DnsRecord: GenericDNSRecord{
-			Domain: domain,
-			Host:   host,
-			Answer: netip.IPv6Unspecified(),
-			Ttl:    ttl,
-		},
-		Pbauth: auth,
-		Client: client,
+// transforms a recordType enum into a string
+func recordTypeToString(recordType RecordType) string {
+	switch recordType {
+	case A:
+		return "A"
+	case AAAA:
+		return "AAAA"
+	default:
+		return ""
 	}
-
-	currentAnswer, err := record.getCurrentAnswer()
-	if err == nil {
-		record.DnsRecord.Answer = currentAnswer
-	}
-
-	return &record, nil
-}
-
-// fetches the current answer for a given IP record.
-func (a *AAAARecord) getCurrentAnswer() (netip.Addr, error) {
-	// fetch existing record information
-	url := fmt.Sprintf(dnsRecordFetchURL, a.DnsRecord.Domain, "AAAA", a.DnsRecord.Host)
-	var dnsRetrieveResponse PBDNSRetrieveResponse
-	response, err := a.Client.TryPostJSON(url, a.Pbauth)
-	if err != nil { // failed response, set unspecified
-		return netip.IPv6Unspecified(), err
-	}
-	defer response.Body.Close()
-
-	if err = json.NewDecoder(response.Body).Decode(&dnsRetrieveResponse); err != nil {
-		return netip.IPv6Unspecified(), err
-	}
-
-	// no record set
-	if len(dnsRetrieveResponse.Records) < 1 {
-		return netip.IPv6Unspecified(), nil
-	}
-
-	// take first result if multiple; each record *should* only correspond to
-	// a single record on Porkbun's end
-	rcd := dnsRetrieveResponse.Records[0]
-
-	content := rcd.Content
-	contentIP, err := netip.ParseAddr(content)
-	if err != nil {
-		return netip.IPv6Unspecified(), nil
-	}
-	return contentIP, nil
 }
