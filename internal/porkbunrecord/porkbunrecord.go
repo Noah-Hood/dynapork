@@ -7,9 +7,13 @@ import (
 	"net/netip"
 
 	"github.com/hoodnoah/dynapork/internal/httpclient"
+	"github.com/hoodnoah/dynapork/internal/ipmonitor"
 )
 
-const dnsRecordFetchURL = "https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s" // url, type, subdomain
+const (
+	dnsRecordFetchURL = "https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s" // url, type, subdomain
+	dnsRecordEditUrl  = "https://api.porkbun.com/api/json/v3/dns/editByNameType/%s/%s/%s"     // url, type, subdomain
+)
 
 type RecordType uint
 
@@ -19,13 +23,14 @@ const (
 )
 
 type DNSRecord struct {
-	Domain     string
-	Subdomain  string
-	RecordType RecordType
-	Answer     netip.Addr
-	Ttl        uint
-	Client     httpclient.IHttpClient
-	Auth       *PBAuth
+	Domain        string
+	Subdomain     string
+	RecordType    RecordType
+	Answer        netip.Addr
+	Ttl           uint
+	Client        httpclient.IHttpClient
+	Auth          *PBAuth
+	UpdateChannel <-chan ipmonitor.IpChange
 }
 
 type APIError struct {
@@ -57,17 +62,6 @@ func (a *AmbiguousRecordError) Error() string {
 	return fmt.Sprintf("more than one record exists for the provided domain, subdomain, and type: %s, %s, %s", a.Domain, a.Subdomain, a.Recordtype)
 }
 
-func genericUnspecified(rt RecordType) netip.Addr {
-	switch rt {
-	case A:
-		return netip.IPv4Unspecified()
-	case AAAA:
-		return netip.IPv6Unspecified()
-	default:
-		return netip.Addr{}
-	}
-}
-
 // Constructor for a new DNS record.
 // Fetches existing DNS information to populate Answer field; if no answer can be found, returns an error.
 // This is because the DNSRecord can *only* update existing records, not create new ones.
@@ -90,6 +84,44 @@ func NewDNSRecord(domain string, subdomain string, recordType RecordType, ttl ui
 	record.Answer = ip
 
 	return record, nil
+}
+
+func (d *DNSRecord) Subscribe(monitor ipmonitor.IIpMonitor) {
+	switch d.RecordType {
+	case A:
+		d.UpdateChannel = monitor.SubscribeV4()
+	case AAAA:
+		d.UpdateChannel = monitor.SubscribeV6()
+	default:
+		d.UpdateChannel = nil
+	}
+
+	// handle changes
+	go func() {
+		for update := range d.UpdateChannel {
+			body := PBDNSEditPayload{
+				PBAuth:  *d.Auth,
+				Content: update.To,
+				Ttl:     600,
+			}
+			url := constructEditUrl(d)
+
+			response, err := d.Client.TryPostJSON(url, body)
+			if err != nil {
+				fmt.Printf("failed to submit update to API: %v", err)
+			} else {
+				if response.StatusCode != 200 {
+					var failResponse PBFailResponse
+					err = json.NewDecoder(response.Body).Decode(&failResponse)
+					if err != nil {
+						fmt.Printf("failed to decode error response: %v\n", err)
+					} else {
+						fmt.Printf("failed to update record with status %d: %s", response.StatusCode, failResponse.Message)
+					}
+				}
+			}
+		}
+	}()
 }
 
 // Gets the current content i.e. the current IP Address pointed to by a given record.
@@ -164,17 +196,16 @@ func handleFailureResult(response *http.Response) error {
 
 // forms the parts of the Retrieval URL based on the constituent members of a DNSRecord
 func constructRetrieveUrl(d *DNSRecord) string {
-	var typeString string
-	switch d.RecordType {
-	case A:
-		typeString = "A"
-	case AAAA:
-		typeString = "AAAA"
-	default:
-		typeString = ""
-	}
+	typeString := recordTypeToString(d.RecordType)
 
 	return fmt.Sprintf(dnsRecordFetchURL, d.Domain, typeString, d.Subdomain)
+}
+
+// forms the parts of the Edit URL based on the constituent members of a DNSRecord
+func constructEditUrl(d *DNSRecord) string {
+	typeString := recordTypeToString(d.RecordType)
+
+	return fmt.Sprintf(dnsRecordEditUrl, d.Domain, typeString, d.Subdomain)
 }
 
 // transforms a recordType enum into a string
@@ -186,5 +217,17 @@ func recordTypeToString(recordType RecordType) string {
 		return "AAAA"
 	default:
 		return ""
+	}
+}
+
+// returns the appropriate unspecified IP address for a given type of record
+func genericUnspecified(rt RecordType) netip.Addr {
+	switch rt {
+	case A:
+		return netip.IPv4Unspecified()
+	case AAAA:
+		return netip.IPv6Unspecified()
+	default:
+		return netip.Addr{}
 	}
 }

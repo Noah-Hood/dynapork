@@ -1,5 +1,7 @@
 package porkbunrecord
 
+import "net/netip"
+
 // porkbun request/response types
 type PBAuth struct {
 	Secretapikey string `json:"secretapikey"`
@@ -25,4 +27,14 @@ type PBDNSRetrieveResponse struct {
 	Status     string                `json:"status"`
 	Cloudflare string                `json:"cloudflare"`
 	Records    []PBDNSRecordResponse `json:"records"`
+}
+
+type PBDNSEditPayload struct {
+	PBAuth
+	Content netip.Addr `json:"content"`
+	Ttl     uint       `json:"ttl"`
+}
+
+type PBDNSEditSuccessResponse struct {
+	Status string `json:"status"`
 }

@@ -63,6 +63,8 @@ func NewIpMonitor(client httpclient.IHttpClient, logger *log.Logger, interval ti
 	return &monitor
 }
 
+// receive a read-only channel which will be populated with
+// detected IPv4 address changes
 func (i *IpMonitor) SubscribeV4() <-chan IpChange {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
@@ -73,6 +75,8 @@ func (i *IpMonitor) SubscribeV4() <-chan IpChange {
 	return updateChannel
 }
 
+// receive a read-only channel which will be populated with
+// detected IPv6 address changes
 func (i *IpMonitor) SubscribeV6() <-chan IpChange {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
